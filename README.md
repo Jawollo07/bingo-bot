@@ -1,19 +1,12 @@
 # 🎱 Bingo Bot
 
-**Ziel:** starten, bei Bedarf einloggen, fertig. Der Bot öffnet einen eigenen Browser, speichert deine Anmeldung lokal, erstellt aus vier BINGO-Matrizen eine zweiseitige A4-Querformat-PDF und sendet sie an den Standarddrucker.
+**Ziel:** Den Starter ausführen, bei Bedarf bei LOTTO Niedersachsen anmelden, fertig. Der Starter öffnet Chrome/Chromium **mit aktiviertem Remote-Debugging auf localhost**. Playwright verbindet sich anschließend mit genau diesem Browser, erstellt aus vier BINGO-Matrizen eine zweiseitige A4-Querformat-PDF und sendet sie an den Drucker.
 
-## Einmalige Einrichtung
+## Voraussetzungen
 
-1. Installiere [Node.js 22 LTS](https://nodejs.org/) oder neuer (mindestens Node.js 20).
-2. Lade das Repository herunter und öffne den Ordner.
-3. Führe im Ordner einmal aus:
-
-   ```sh
-   npm install
-   npm run setup
-   ```
-
-   `npm run setup` lädt Chromium herunter. Unter Linux können abhängig von der Distribution zusätzliche Browser-Systembibliotheken nötig sein.
+1. Node.js 22 LTS oder neuer.
+2. Google Chrome oder Chromium installiert.
+3. Ein eingerichteter Standarddrucker.
 
 ## Starten
 
@@ -21,16 +14,27 @@
 
 **Linux:** Im Projektordner `./start.sh` ausführen (falls nötig einmal `chmod +x start.sh`).
 
-Beide Starter installieren beim ersten Aufruf fehlende npm-Pakete und Chromium automatisch. Danach reicht ein Doppelklick bzw. ein einzelner Startbefehl. Alternativ kannst du `npm start` direkt verwenden, wenn die Einrichtung bereits erledigt ist.
+Beim ersten Start installiert der Starter die npm-Pakete, öffnet Chrome/Chromium mit `--remote-debugging-port=9222` und navigiert zu LOTTO Niedersachsen. Melde dich im Browser an und bestätige die Eingabe im Terminal. Das Browserprofil wird in `.browser-profile/` gespeichert. Bei späteren Starts wird dasselbe Profil verwendet.
 
-Beim ersten Start öffnet sich der Browser. Melde dich bei LOTTO Niedersachsen an und bestätige die Eingabe im Terminal. Die Anmeldung wird in `.browser-profile/` gespeichert; bei späteren Starts ist normalerweise kein erneuter Login nötig.
+Der Debug-Port ist ausdrücklich auf `127.0.0.1` beschränkt und wird nicht im Netzwerk freigegeben. **Starte den Browser möglichst immer über den Starter**: Ein bereits normal gestarteter Chrome kann das Debugging nicht nachträglich aktivieren und kann außerdem das Profil sperren.
+
+### Linux: Browser nicht automatisch gefunden?
+
+Du kannst den Pfad explizit angeben:
+
+```sh
+BINGO_BROWSER=/usr/bin/chromium ./start.sh
+```
+
+### Windows: Chrome an anderem Ort installiert?
+
+Setze `BINGO_BROWSER` auf den vollständigen Pfad zu `chrome.exe`, bevor du `start.bat` ausführst, oder passe den Starter an.
+
+## Ausgabe
 
 Der Bot erwartet vier Spielschein-Links unter „Meine Spiele“. Er erstellt `downloads/TT-MM-JJJJ/bingo-alle.pdf` und sendet diese an den Standarddrucker. Falls Drucken nicht funktioniert, bleibt die PDF gespeichert und der vollständige Dateipfad wird angezeigt.
 
-## Optional
-
-- `BINGO_PRINTER`: Druckername für einen bestimmten Drucker
-- `BINGO_CDP_ENDPOINT`: wird nicht mehr benötigt; der Bot verwaltet seinen Browser selbst.
+Optional kannst du `BINGO_PRINTER` auf den Namen eines bestimmten Druckers setzen. `BINGO_CDP_ENDPOINT` überschreibt bei Bedarf den Standard-Endpunkt `http://127.0.0.1:9222`.
 
 ## Tests
 
@@ -42,6 +46,7 @@ Die Tests prüfen die PDF-Erstellung ohne echtes LOTTO-Konto. Der vollständige 
 
 ## Datenschutz und Sicherheit
 
-- Der Login findet manuell im lokalen Browser statt; der Bot speichert keine Zugangsdaten.
-- Das Browserprofil `.browser-profile/` enthält deine Sitzung und sollte privat bleiben. Teile es nicht und committe es nicht.
+- Der Login erfolgt manuell im lokalen Browser; der Bot speichert keine Zugangsdaten.
+- `.browser-profile/` enthält deine Anmeldung und sollte privat bleiben. Teile es nicht und committe es nicht.
+- Remote-Debugging kann Zugriff auf die Browser-Sitzung ermöglichen. Deshalb bindet der Starter den Debug-Port nur an `127.0.0.1`.
 - Der Bot druckt automatisch, sobald die PDF erfolgreich erstellt wurde. Prüfe bei Bedarf die Druckerauswahl vor dem Start.
