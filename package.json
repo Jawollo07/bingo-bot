@@ -6,8 +6,7 @@
   "scripts": {
     "dev": "node index.js",
     "start": "node index.js",
-    "test": "node --test",
-    "setup": "playwright install chromium"
+    "test": "node --test"
   },
   "keywords": ["bingo", "playwright", "pdf", "lotto-niedersachsen"],
   "author": "",
