@@ -1,0 +1,7 @@
+[Desktop Entry]
+Type=Application
+Name=Bingo Bot
+Comment=LOTTO-Niedersachsen-BINGO-Matrizen als PDF erstellen und drucken
+Exec=bingo-bot
+Terminal=true
+Categories=Office;Utility;
