@@ -10,6 +10,15 @@ Der Installer bringt Node.js und die npm-Abhängigkeiten mit. **Google Chrome mu
 
 Das Browserprofil der installierten Version liegt unter `%LOCALAPPDATA%\Bingo-Bot\browser-profile`, die erzeugten PDFs liegen im Installationsordner unter `downloads`. Teile das Browserprofil nicht, da es deine Anmeldung enthalten kann.
 
+## Linux-Pakete
+
+Ein Linux-Build wird über [GitHub Actions](https://github.com/Jawollo07/bingo-bot/actions/workflows/linux-packages.yml) erstellt. Öffne den erfolgreichen Lauf **Linux packages** und lade unter **Artifacts** das Archiv **Bingo-Bot-Linux** herunter.
+
+- **CachyOS, Arch Linux und andere Distributionen:** `Bingo-Bot-Linux-x64.tar.gz` entpacken und `./start-linux-installed.sh` ausführen.
+- **Ubuntu/Debian:** `Bingo-Bot-1.2.0-amd64.deb` herunterladen und mit `sudo apt install ./Bingo-Bot-1.2.0-amd64.deb` installieren. Danach im Anwendungsmenü nach **Bingo Bot** suchen oder `bingo-bot` starten.
+
+Die Linux-Pakete enthalten Node.js und die npm-Abhängigkeiten. Chrome/Chromium und `curl` müssen auf dem System installiert sein. Dein Browserprofil und die erzeugten PDFs liegen in `${XDG_DATA_HOME:-~/.local/share}/bingo-bot/`, unabhängig davon, wo das Programm installiert wurde. Das Archiv ist für x86-64-PCs gebaut.
+
 ## Voraussetzungen für den manuellen Start
 
 1. Node.js 22 LTS oder neuer.
