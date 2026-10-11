@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+APP_PATH="$(readlink -f -- "${BASH_SOURCE[0]}")"
+APP_DIR="$(cd -- "$(dirname -- "$APP_PATH")" && pwd)"
+if [[ "$(basename "$APP_DIR")" == "bin" && -f "$APP_DIR/../index.js" ]]; then
+  APP_DIR="$(cd -- "$APP_DIR/.." && pwd)"
+fi
 DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}/bingo-bot"
 mkdir -p "$DATA_DIR/browser-profile" "$DATA_DIR/downloads"
 export BINGO_DATA_DIR="$DATA_DIR/downloads"
