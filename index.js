@@ -9,7 +9,7 @@ import { createTwoPageLandscapePdf } from "./pdf-layout.js";
 
 const ACCOUNT_URL = "https://www.lotto-niedersachsen.de/spielkonto/meine-spiele";
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
-const DOWNLOAD_FOLDER = path.join(ROOT, "downloads");
+const DOWNLOAD_FOLDER = process.env.BINGO_DATA_DIR ?? path.join(ROOT, "downloads");
 const CDP_ENDPOINT = process.env.BINGO_CDP_ENDPOINT ?? "http://127.0.0.1:9222";
 const PRINTER = process.env.BINGO_PRINTER;
 
