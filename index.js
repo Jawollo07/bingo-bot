@@ -106,12 +106,12 @@ async function printPdf(pdfPath) {
 }
 
 async function main() {
+    let browser;
     try {
         await fs.mkdir(DOWNLOAD_FOLDER, { recursive: true });
 
         console.log("🎱 Bingo Bot");
         console.log(`Verbinde mit dem bereits gestarteten Debug-Browser: ${CDP_ENDPOINT}`);
-        let browser;
         try {
             browser = await chromium.connectOverCDP(CDP_ENDPOINT, { timeout: 10_000 });
         } catch {
@@ -159,6 +159,9 @@ async function main() {
         console.error("\n❌ Der Bingo Bot konnte nicht fertig ausgeführt werden.");
         console.error(error.message ?? error);
         process.exitCode = 1;
+    } finally {
+        // Disconnect Playwright; the externally started browser stays open.
+        if (browser) await browser.close().catch(() => {});
     }
 }
 
