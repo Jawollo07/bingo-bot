@@ -89,7 +89,7 @@ async function downloadBingoSheets(page, spiele, outputFolder) {
         const bingoLink = await getBingoLink(page);
         await navigate(page, bingoLink.href);
         pdfPaths.push(await saveBingoMatrixPdf(page, spiel.id, outputFolder));
-        console.log("   ✓ PDF gespeichert");
+        console.log("PDF gespeichert");
     }
     return pdfPaths;
 }
@@ -98,11 +98,11 @@ async function printPdf(pdfPath) {
     console.log("\n🖨️ Sende die fertige PDF an den Drucker …");
     if (os.platform() === "win32") {
         const { print } = await import("pdf-to-printer");
-        await print(pdfPath, PRINTER ? { printer: PRINTER } : {});
+        await print(pdfPath);
         return;
     }
     const { print } = await import("unix-print");
-    await print(pdfPath, { printer: PRINTER ?? "default" });
+    await print(pdfPath);
 }
 
 async function main() {
