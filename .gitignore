@@ -147,3 +147,10 @@ vite.config.ts.timestamp-*
 
 # Turbo Repo
 .turbo
+
+# Bingo Bot local state
+.browser-profile/
+.setup-complete
+downloads/
+playwright-report/
+test-results/
