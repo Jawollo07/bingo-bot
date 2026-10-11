@@ -1,40 +1,36 @@
-# Bingo Bot
+# 🎱 Bingo Bot
 
-Erstellt aus vier BINGO-Matrizen im angemeldeten LOTTO-Niedersachsen-Konto eine zweiseitige A4-Querformat-PDF (zwei Matrizen pro Seite) und sendet sie an den Standarddrucker.
+**Ziel:** starten, bei Bedarf einloggen, fertig. Der Bot öffnet einen eigenen Browser, speichert deine Anmeldung lokal, erstellt aus vier BINGO-Matrizen eine zweiseitige A4-Querformat-PDF und sendet sie an den Standarddrucker.
 
-## Voraussetzungen
+## Einmalige Einrichtung
 
-- Node.js 22 oder neuer und npm
-- Chromium/Google Chrome mit aktiviertem Chrome DevTools Protocol (CDP)
-- Eine bereits angemeldete Browser-Sitzung für LOTTO Niedersachsen
-- Ein eingerichteter Standarddrucker (Linux: CUPS/LP; Windows: installierter Drucker)
+1. Installiere [Node.js 22 LTS](https://nodejs.org/) oder neuer (mindestens Node.js 20).
+2. Lade das Repository herunter und öffne den Ordner.
+3. Führe im Ordner einmal aus:
 
-## Installation
+   ```sh
+   npm install
+   npm run setup
+   ```
 
-```sh
-npm ci
-```
+   `npm run setup` lädt Chromium herunter. Unter Linux können abhängig von der Distribution zusätzliche Browser-Systembibliotheken nötig sein.
 
-Starte Chrome mit Remote-Debugging. Beispiel für Linux mit einem separaten Profil:
+## Starten
 
-```sh
-google-chrome --remote-debugging-port=9222 --user-data-dir="$HOME/.config/bingo-chrome"
-```
-
-Melde dich in diesem Browser manuell bei LOTTO Niedersachsen an. Die Sitzung wird nicht automatisiert angemeldet; Zugangsdaten werden nicht gespeichert.
-
-## Ausführen
+Jedes weitere Mal reicht:
 
 ```sh
 npm start
 ```
 
-Die PDFs werden unter `downloads/TT-MM-JJJJ/` abgelegt. Die zusammengeführte Datei heißt `bingo-alle.pdf` und wird anschließend gedruckt.
+Beim ersten Start öffnet sich der Browser. Melde dich bei LOTTO Niedersachsen an und bestätige die Eingabe im Terminal. Die Anmeldung wird in `.browser-profile/` gespeichert; bei späteren Starts ist normalerweise kein erneuter Login nötig.
 
-Optionale Umgebungsvariablen:
+Der Bot erwartet vier Spielschein-Links unter „Meine Spiele“. Er erstellt `downloads/TT-MM-JJJJ/bingo-alle.pdf` und sendet diese an den Standarddrucker. Falls Drucken nicht funktioniert, bleibt die PDF gespeichert und der vollständige Dateipfad wird angezeigt.
 
-- `BINGO_CDP_ENDPOINT`: CDP-URL; Standard `http://127.0.0.1:9222`
-- `BINGO_PRINTER`: Name eines bestimmten Druckers; ohne Angabe wird der Standarddrucker verwendet
+## Optional
+
+- `BINGO_PRINTER`: Druckername für einen bestimmten Drucker
+- `BINGO_CDP_ENDPOINT`: wird nicht mehr benötigt; der Bot verwaltet seinen Browser selbst.
 
 ## Tests
 
@@ -42,10 +38,10 @@ Optionale Umgebungsvariablen:
 npm test
 ```
 
-Die automatisierten Tests prüfen die PDF-Zusammenführung ohne Anmeldung, Browser oder Drucker. Der vollständige Lotto-Ablauf muss lokal mit einer angemeldeten Sitzung getestet werden.
+Die Tests prüfen die PDF-Erstellung ohne echtes LOTTO-Konto. Der vollständige Website- und Druckablauf hängt von der aktuellen Website, der Kontositzung und dem eingerichteten Drucker ab.
 
-## Hinweise
+## Datenschutz und Sicherheit
 
-- Das Skript erwartet genau vier Spielschein-Links auf „Meine Spiele“.
-- Die Reihenfolge der Spielscheine wird so übernommen, wie sie auf der Website angezeigt wird.
-- Der Browser muss auf dem Rechner laufen, auf dem das Skript ausgeführt wird, und CDP darf nicht ungeschützt im Netzwerk exponiert werden.
+- Der Login findet manuell im lokalen Browser statt; der Bot speichert keine Zugangsdaten.
+- Das Browserprofil `.browser-profile/` enthält deine Sitzung und sollte privat bleiben. Teile es nicht und committe es nicht.
+- Der Bot druckt automatisch, sobald die PDF erfolgreich erstellt wurde. Prüfe bei Bedarf die Druckerauswahl vor dem Start.
