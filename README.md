@@ -17,11 +17,11 @@
 
 ## Starten
 
-Jedes weitere Mal reicht:
+**Windows:** Doppelklick auf `start.bat`.
 
-```sh
-npm start
-```
+**Linux:** Im Projektordner `./start.sh` ausführen (falls nötig einmal `chmod +x start.sh`).
+
+Beide Starter installieren beim ersten Aufruf fehlende npm-Pakete und Chromium automatisch. Danach reicht ein Doppelklick bzw. ein einzelner Startbefehl. Alternativ kannst du `npm start` direkt verwenden, wenn die Einrichtung bereits erledigt ist.
 
 Beim ersten Start öffnet sich der Browser. Melde dich bei LOTTO Niedersachsen an und bestätige die Eingabe im Terminal. Die Anmeldung wird in `.browser-profile/` gespeichert; bei späteren Starts ist normalerweise kein erneuter Login nötig.
 
