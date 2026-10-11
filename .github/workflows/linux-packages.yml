@@ -1,0 +1,82 @@
+name: Linux packages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-linux:
+    name: Build Linux packages
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Prepare Linux bundle
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/bundle/runtime dist/bundle/bin dist/bundle/share/applications
+          cp index.js pdf-layout.js package.json start-linux-installed.sh dist/bundle/
+          cp start-linux-installed.sh dist/bundle/bin/bingo-bot
+          chmod +x dist/bundle/start-linux-installed.sh dist/bundle/bin/bingo-bot
+          cp "$(command -v node)" dist/bundle/runtime/node
+          chmod +x dist/bundle/runtime/node
+          npm prune --omit=dev
+          cp -a node_modules dist/bundle/node_modules
+          cp packaging/bingo-bot.desktop dist/bundle/share/applications/bingo-bot.desktop
+          test -x dist/bundle/runtime/node
+          test -f dist/bundle/package.json
+          test -f dist/bundle/node_modules/playwright/package.json
+          tar -czf dist/Bingo-Bot-Linux-x64.tar.gz -C dist/bundle .
+
+      - name: Build Debian package
+        shell: bash
+        run: |
+          set -euo pipefail
+          PKG="dist/deb-root"
+          mkdir -p "$PKG/DEBIAN" "$PKG/opt/bingo-bot" "$PKG/usr/bin" "$PKG/usr/share/applications"
+          cp -a dist/bundle/. "$PKG/opt/bingo-bot/"
+          ln -s /opt/bingo-bot/bin/bingo-bot "$PKG/usr/bin/bingo-bot"
+          cp packaging/bingo-bot.desktop "$PKG/usr/share/applications/bingo-bot.desktop"
+          cat > "$PKG/DEBIAN/control" <<'CONTROL'
+          Package: bingo-bot
+          Version: 1.2.0
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Maintainer: Jawollo07
+          Depends: libc6, libstdc++6, curl
+          Description: Bingo Bot für LOTTO Niedersachsen
+           Erstellt eine zweiseitige PDF mit vier BINGO-Matrizen und druckt sie.
+          CONTROL
+          chmod 0755 "$PKG/DEBIAN"
+          dpkg-deb --root-owner-group --build "$PKG" dist/Bingo-Bot-1.2.0-amd64.deb
+          dpkg-deb --info dist/Bingo-Bot-1.2.0-amd64.deb
+
+      - name: Upload Linux packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: Bingo-Bot-Linux
+          path: |
+            dist/Bingo-Bot-Linux-x64.tar.gz
+            dist/Bingo-Bot-1.2.0-amd64.deb
+          if-no-files-found: error
+          retention-days: 30
