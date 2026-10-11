@@ -1,0 +1,61 @@
+name: Windows installer
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-installer:
+    name: Build Bingo-Bot-Setup.exe
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Prepare portable application folder
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $dist = Join-Path $PWD "dist\Bingo-Bot"
+          New-Item -ItemType Directory -Force -Path $dist | Out-Null
+          New-Item -ItemType Directory -Force -Path (Join-Path $dist "runtime") | Out-Null
+          Copy-Item index.js, pdf-layout.js, start-installed.bat -Destination $dist
+          Copy-Item (Get-Command node).Source -Destination (Join-Path $dist "runtime\node.exe")
+          npm prune --omit=dev
+          Copy-Item node_modules -Destination $dist -Recurse
+          if (-not (Test-Path (Join-Path $dist "runtime\node.exe"))) { throw "Bundled Node.js runtime missing" }
+          if (-not (Test-Path (Join-Path $dist "node_modules\playwright\package.json"))) { throw "Playwright dependency missing" }
+
+      - name: Compile Inno Setup installer
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { throw "Inno Setup compiler not found at $iscc" }
+          & $iscc "installer\Bingo-Bot.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed with exit code $LASTEXITCODE" }
+
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: Bingo-Bot-Setup
+          path: dist/installer/Bingo-Bot-Setup.exe
+          if-no-files-found: error
+          retention-days: 30
