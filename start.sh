@@ -12,12 +12,6 @@ if [ ! -d node_modules ]; then
   npm install
 fi
 
-if [ ! -f .setup-complete ]; then
-  echo "Einmalige Einrichtung: Playwright-Abhängigkeiten werden installiert …"
-  npx playwright install chromium
-  touch .setup-complete
-fi
-
 DEBUG_URL="http://127.0.0.1:9222/json/version"
 ACCOUNT_URL="https://www.lotto-niedersachsen.de/spielkonto/meine-spiele"
 
