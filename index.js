@@ -10,7 +10,7 @@ import { createTwoPageLandscapePdf } from "./pdf-layout.js";
 const ACCOUNT_URL = "https://www.lotto-niedersachsen.de/spielkonto/meine-spiele";
 const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const DOWNLOAD_FOLDER = path.join(ROOT, "downloads");
-const PROFILE_FOLDER = path.join(ROOT, ".browser-profile");
+const CDP_ENDPOINT = process.env.BINGO_CDP_ENDPOINT ?? "http://127.0.0.1:9222";
 const PRINTER = process.env.BINGO_PRINTER;
 
 async function navigate(page, url) {
@@ -106,18 +106,24 @@ async function printPdf(pdfPath) {
 }
 
 async function main() {
-    let context;
     try {
         await fs.mkdir(DOWNLOAD_FOLDER, { recursive: true });
-        await fs.mkdir(PROFILE_FOLDER, { recursive: true });
 
         console.log("🎱 Bingo Bot");
-        console.log("Der Browser wird geöffnet. Beim ersten Start musst du dich einmal bei LOTTO Niedersachsen anmelden.");
-        context = await chromium.launchPersistentContext(PROFILE_FOLDER, {
-            headless: false,
-            viewport: null,
-            args: ["--start-maximized"],
-        });
+        console.log(`Verbinde mit dem bereits gestarteten Debug-Browser: ${CDP_ENDPOINT}`);
+        let browser;
+        try {
+            browser = await chromium.connectOverCDP(CDP_ENDPOINT, { timeout: 10_000 });
+        } catch {
+            throw new Error(
+                "Kein Debug-Browser erreichbar. Starte den Bot mit start.sh (Linux) oder start.bat (Windows), " +
+                "damit Chrome/Chromium mit --remote-debugging-port=9222 geöffnet wird."
+            );
+        }
+        const context = browser.contexts()[0];
+        if (!context) {
+            throw new Error("Der Debug-Browser hat keinen verfügbaren Browser-Kontext.");
+        }
         const page = context.pages()[0] ?? await context.newPage();
         await navigate(page, ACCOUNT_URL);
         const spiele = await waitForLoginIfNeeded(page);
@@ -153,8 +159,6 @@ async function main() {
         console.error("\n❌ Der Bingo Bot konnte nicht fertig ausgeführt werden.");
         console.error(error.message ?? error);
         process.exitCode = 1;
-    } finally {
-        if (context) await context.close().catch(() => {});
     }
 }
 
