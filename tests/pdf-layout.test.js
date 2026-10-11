@@ -8,7 +8,7 @@ import { createTwoPageLandscapePdf } from "../pdf-layout.js";
 
 async function makePdf(filePath, pageCount = 1) {
     const pdf = await PDFDocument.create();
-    for (let i = 0; i < pageCount; i += 1) pdf.addPage(PageSizes.A4);
+    for (let i = 0; i < pageCount; i += 1) pdf.addPage(PageSizes.A4).drawText(`Test page ${i + 1}`);
     await fs.writeFile(filePath, await pdf.save());
 }
 
