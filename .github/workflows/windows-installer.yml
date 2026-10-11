@@ -36,11 +36,13 @@ jobs:
           $dist = Join-Path $PWD "dist\Bingo-Bot"
           New-Item -ItemType Directory -Force -Path $dist | Out-Null
           New-Item -ItemType Directory -Force -Path (Join-Path $dist "runtime") | Out-Null
-          Copy-Item index.js, pdf-layout.js, start-installed.bat -Destination $dist
+          Copy-Item index.js, pdf-layout.js, package.json, start-installed.bat -Destination $dist
           Copy-Item (Get-Command node).Source -Destination (Join-Path $dist "runtime\node.exe")
           npm prune --omit=dev
+          if ($LASTEXITCODE -ne 0) { throw "npm prune failed" }
           Copy-Item node_modules -Destination $dist -Recurse
           if (-not (Test-Path (Join-Path $dist "runtime\node.exe"))) { throw "Bundled Node.js runtime missing" }
+          if (-not (Test-Path (Join-Path $dist "package.json"))) { throw "package.json missing (needed for ES modules)" }
           if (-not (Test-Path (Join-Path $dist "node_modules\playwright\package.json"))) { throw "Playwright dependency missing" }
 
       - name: Compile Inno Setup installer
