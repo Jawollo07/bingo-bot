@@ -1,13 +1,14 @@
 import { chromium } from "playwright";
 import fs from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import os from "node:os";
 import readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import { createTwoPageLandscapePdf } from "./pdf-layout.js";
 
 const ACCOUNT_URL = "https://www.lotto-niedersachsen.de/spielkonto/meine-spiele";
-const ROOT = path.dirname(new URL(import.meta.url).pathname);
+const ROOT = path.dirname(fileURLToPath(import.meta.url));
 const DOWNLOAD_FOLDER = path.join(ROOT, "downloads");
 const PROFILE_FOLDER = path.join(ROOT, ".browser-profile");
 const PRINTER = process.env.BINGO_PRINTER;
