@@ -15,13 +15,6 @@ if not exist "node_modules" (
   if errorlevel 1 goto :error
 )
 
-if not exist ".setup-complete" (
-  echo Einmalige Einrichtung: Playwright-Abhaengigkeiten werden installiert ...
-  call npx playwright install chromium
-  if errorlevel 1 goto :error
-  type nul > ".setup-complete"
-)
-
 set "DEBUG_URL=http://127.0.0.1:9222/json/version"
 set "ACCOUNT_URL=https://www.lotto-niedersachsen.de/spielkonto/meine-spiele"
 
