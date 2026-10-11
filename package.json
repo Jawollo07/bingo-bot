@@ -1,12 +1,14 @@
 {
   "name": "bingo-bot",
-  "version": "1.0.0",
-  "description": "",
+  "version": "1.1.0",
+  "description": "Erstellt eine zweiseitige PDF mit vier BINGO-Matrizen aus dem angemeldeten LOTTO-Niedersachsen-Browser und kann sie drucken.",
   "main": "index.js",
   "scripts": {
-    "dev": "node index.js"
+    "dev": "node index.js",
+    "start": "node index.js",
+    "test": "node --test"
   },
-  "keywords": [],
+  "keywords": ["bingo", "playwright", "pdf", "lotto-niedersachsen"],
   "author": "",
   "license": "ISC",
   "type": "module",
@@ -19,6 +21,7 @@
     "pdf-lib": "^1.17.1",
     "pdf-merger-js": "^5.1.2",
     "pdf-to-printer": "^5.8.1",
+    "playwright": "^1.63.0",
     "unix-print": "^1.3.2"
   }
 }
