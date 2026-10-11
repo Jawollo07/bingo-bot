@@ -1,175 +1,130 @@
 import { chromium } from "playwright";
 import fs from "node:fs/promises";
-import { createTwoPageLandscapePdf } from "./pdf-layout.js";
+import path from "node:path";
 import os from "node:os";
+import { createTwoPageLandscapePdf } from "./pdf-layout.js";
 
-const browser = await chromium.connectOverCDP(
-    "http://127.0.0.1:9222"
-);
+const ACCOUNT_URL = "https://www.lotto-niedersachsen.de/spielkonto/meine-spiele";
+const DOWNLOAD_FOLDER = path.resolve("downloads");
+const CDP_ENDPOINT = process.env.BINGO_CDP_ENDPOINT ?? "http://127.0.0.1:9222";
 
-const ptp = os.platform() === 'win32' 
-  ? await import('pdf-to-printer') 
-  : await import('unix-print');
-
-const context = browser.contexts()[0];
-const pages = context.pages();
-const page = pages[0];
-
-const url =
-    "https://www.lotto-niedersachsen.de/spielkonto/meine-spiele";
-
-const downloadFolder = "./downloads";
-
-async function goTo(url) {
+async function navigate(page, url) {
     console.log(`\n→ Öffne: ${url}`);
-
-    await page.goto(url, {
-        waitUntil: "networkidle"
-    });
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    // Manche Seiten halten Hintergrundanfragen offen; networkidle ist deshalb kein Muss.
+    await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => {});
+    await page.locator("body").waitFor({ state: "visible", timeout: 10_000 });
 }
-async function printPdf(pdfPath) {
-    console.log(`\n→ Drucke PDF: ${pdfPath}`);
 
-    if (os.platform() === 'win32') {
-        await ptp.print(pdfPath);
-    } else {
-        await ptp.print(pdfPath, { printer: 'default' });
-    }
-}
-async function getSpielscheine() {
-    const spiele = await page.locator(
-        'a[href*="/spielkonto/meine-spiele/"]'
-    ).evaluateAll(elements =>
+async function getSpielscheine(page) {
+    const spiele = await page.locator('a[href*="/spielkonto/meine-spiele/"]').evaluateAll((elements) =>
         elements
-            .map(a => ({
-                text: a.innerText.trim().replace(/\s+/g, " "),
-                href: a.href,
-                id: a.href.split("/").pop()
-            }))
-            .filter(x =>
-                /\/spielkonto\/meine-spiele\/\d+$/.test(
-                    new URL(x.href).pathname
-                )
-            )
+            .map((a) => {
+                const href = a.href;
+                const match = new URL(href).pathname.match(/\/spielkonto\/meine-spiele\/(\d+)\/?$/);
+                return match
+                    ? { text: a.innerText.trim().replace(/\s+/g, " "), href, id: match[1] }
+                    : null;
+            })
+            .filter(Boolean)
     );
 
-    // Nur die 4 neuesten Spielscheine
-    return spiele.slice(0, 4);
+    // Reihenfolge der Lotto-Seite beibehalten und doppelte Links entfernen.
+    return [...new Map(spiele.map((spiel) => [spiel.id, spiel])).values()].slice(0, 4);
 }
 
-async function getBingoLink() {
-    const locator = page.locator(
-        'a[href*="/bingomatrix"]'
-    ).first();
-
-    if (!(await locator.count())) {
-        throw new Error(
-            `Kein BINGO-Matrix-Link auf ${page.url()} gefunden!`
-        );
+async function getBingoLink(page) {
+    const locator = page.locator('a[href*="/bingomatrix"]').first();
+    try {
+        await locator.waitFor({ state: "attached", timeout: 10_000 });
+    } catch {
+        throw new Error(`Kein BINGO-Matrix-Link auf ${page.url()} gefunden. Ist der Account angemeldet?`);
     }
-
-    return await locator.evaluate(a => ({
-        text: a.innerText.trim(),
-        href: a.href
-    }));
+    return locator.evaluate((a) => ({ text: a.innerText.trim(), href: a.href }));
 }
 
-async function downloadBingoMatrix(id, outputFolder) {
-    const pdfPath = `${outputFolder}/${id}.pdf`;
-
+async function saveBingoMatrixPdf(page, id, outputFolder) {
+    const pdfPath = path.join(outputFolder, `${id}.pdf`);
     console.log(`   → Erzeuge PDF: ${pdfPath}`);
-
     await page.pdf({
         path: pdfPath,
         format: "A4",
         printBackground: true,
-        margin: {
-            top: "0",
-            right: "0",
-            bottom: "0",
-            left: "0"
-        }
+        preferCSSPageSize: true,
+        margin: { top: "0", right: "0", bottom: "0", left: "0" },
     });
 
+    const stat = await fs.stat(pdfPath);
+    if (stat.size === 0) throw new Error(`Die erzeugte PDF ist leer: ${pdfPath}`);
     return pdfPath;
 }
 
-async function downloadBingoSheets(spiele, outputFolder) {
+async function downloadBingoSheets(page, spiele, outputFolder) {
     const pdfPaths = [];
-
     for (const [index, spiel] of spiele.entries()) {
-        console.log(
-            `\n[${index + 1}/${spiele.length}] Spielschein ${spiel.id}`
-        );
-
-        console.log(`${spiel.text}`);
-
-        // Spielschein öffnen
-        await goTo(spiel.href);
-
-        // BINGO-Matrix-Link suchen
-        const bingoLink = await getBingoLink();
-
+        console.log(`\n[${index + 1}/${spiele.length}] Spielschein ${spiel.id}`);
+        console.log(spiel.text || "(ohne Beschriftung)");
+        await navigate(page, spiel.href);
+        const bingoLink = await getBingoLink(page);
         console.log(`   BINGO-Link: ${bingoLink.href}`);
-
-        // BINGO-Matrix öffnen
-        await goTo(bingoLink.href);
-
-        // Kleine zusätzliche Wartezeit für die Darstellung
-        await page.waitForTimeout(500);
-
-        // PDF erzeugen
-        const pdfPath = await downloadBingoMatrix(spiel.id, outputFolder);
-
-        pdfPaths.push(pdfPath);
+        await navigate(page, bingoLink.href);
+        pdfPaths.push(await saveBingoMatrixPdf(page, spiel.id, outputFolder));
     }
-
     return pdfPaths;
 }
 
+async function printPdf(pdfPath) {
+    console.log(`\n→ Drucke PDF: ${pdfPath}`);
+    const printer = process.env.BINGO_PRINTER;
+    if (os.platform() === "win32") {
+        const { print } = await import("pdf-to-printer");
+        await print(pdfPath, printer ? { printer } : {});
+        return;
+    }
+    const { print } = await import("unix-print");
+    await print(pdfPath, { printer: printer ?? "default" });
+}
+
 async function main() {
+    let browser;
     try {
-        // Download-Ordner erstellen
-        await fs.mkdir(downloadFolder, {
-            recursive: true
-        });
-
-        // Meine Spiele öffnen
-        await goTo(url);
-
-        // Alle Spielscheine finden
-        const spiele = await getSpielscheine();
-
-        console.log("\nGefundene Spielscheine:");
-        console.table(spiele);
-
-        if (spiele.length !== 4) {
+        await fs.mkdir(DOWNLOAD_FOLDER, { recursive: true });
+        try {
+            browser = await chromium.connectOverCDP(CDP_ENDPOINT, { timeout: 5_000 });
+        } catch (error) {
             throw new Error(
-                `Es werden genau 4 Spielscheine für die 2-seitige PDF benötigt; gefunden: ${spiele.length}.`
+                `Chromium ist unter ${CDP_ENDPOINT} nicht erreichbar. Starte Chrome mit Remote-Debugging (Port 9222) und melde dich bei LOTTO Niedersachsen an. Details: ${error.message}`
             );
         }
 
-        console.log(
-            `\n${spiele.length} Spielschein(e) gefunden.`
-        );
+        const context = browser.contexts()[0];
+        if (!context) throw new Error("Der verbundene Chromium-Browser hat keinen Browser-Kontext.");
+        const page = context.pages()[0] ?? await context.newPage();
+
+        await navigate(page, ACCOUNT_URL);
+        const spiele = await getSpielscheine(page);
+        console.log("\nGefundene Spielscheine:");
+        console.table(spiele);
+        if (spiele.length !== 4) {
+            throw new Error(
+                `Für die zweiseitige PDF werden genau 4 Spielscheine benötigt; gefunden: ${spiele.length}. Prüfe Anmeldung und „Meine Spiele“.`
+            );
+        }
+
         const now = new Date();
-        const dateFolder =
-            `${String(now.getDate()).padStart(2, "0")}-` +
-            `${String(now.getMonth() + 1).padStart(2, "0")}-` +
-            `${now.getFullYear()}`;
-        const runDownloadFolder = `${downloadFolder}/${dateFolder}`;
-        const mergedPdfPath = `${runDownloadFolder}/bingo-alle.pdf`;
-        await fs.mkdir(runDownloadFolder, {
-            recursive: true
-        });
+        const dateFolder = [
+            String(now.getDate()).padStart(2, "0"),
+            String(now.getMonth() + 1).padStart(2, "0"),
+            String(now.getFullYear()),
+        ].join("-");
+        const runDownloadFolder = path.join(DOWNLOAD_FOLDER, dateFolder);
+        const mergedPdfPath = path.join(runDownloadFolder, "bingo-alle.pdf");
+        await fs.mkdir(runDownloadFolder, { recursive: true });
 
-        // BINGO-Matrizen herunterladen
-        const pdfPaths = await downloadBingoSheets(spiele, runDownloadFolder);
-
-        console.log("\nErzeugte PDFs:");
-        console.table(pdfPaths);
+        const pdfPaths = await downloadBingoSheets(page, spiele, runDownloadFolder);
         await createTwoPageLandscapePdf(pdfPaths, mergedPdfPath);
         await printPdf(mergedPdfPath);
+
         console.log("\n=================================");
         console.log("✅ FERTIG");
         console.log("=================================");
@@ -180,6 +135,9 @@ async function main() {
         console.error("\n❌ FEHLER:");
         console.error(error);
         process.exitCode = 1;
+    } finally {
+        // Bei einer CDP-Verbindung wird die Verbindung getrennt; der Nutzerbrowser bleibt offen.
+        if (browser) await browser.close().catch(() => {});
     }
 }
 
