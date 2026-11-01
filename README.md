@@ -1,57 +1,64 @@
 # 🎱 Bingo Bot
 
-**Ziel:** Den Starter ausführen, bei Bedarf bei LOTTO Niedersachsen anmelden, fertig. Der Starter öffnet Chrome/Chromium **mit aktiviertem Remote-Debugging auf localhost**. Playwright verbindet sich anschließend mit genau diesem Browser, erstellt aus vier BINGO-Matrizen eine zweiseitige A4-Querformat-PDF und sendet sie an den Drucker.
+Der Bingo Bot öffnet einen lokalen Browser mit deinem LOTTO-Niedersachsen-Konto, liest genau vier BINGO-Spielscheine aus, erzeugt daraus eine zweiseitige A4-Querformat-PDF und kann sie an einen ausgewählten Drucker senden.
 
-## Windows-Installer
+**Neu in 1.3.0:** lokale grafische Oberfläche, Druckerauswahl, Live-Protokoll, Abbruchfunktion, persistente Einstellungen sowie robustere Browser- und Fehlerbehandlung.
 
-Ein Windows-Installer wird über GitHub Actions gebaut. Öffne die [Actions-Seite](https://github.com/Jawollo07/bingo-bot/actions), wähle den erfolgreichen Lauf **Windows installer** und lade unter **Artifacts** das Artefakt **Bingo-Bot-Setup** herunter. Darin befindet sich `Bingo-Bot-Setup.exe`. Das Artefakt wird 30 Tage aufbewahrt.
+## Starten
 
-Der Installer bringt Node.js und die npm-Abhängigkeiten mit. **Google Chrome muss separat installiert sein.** Nach der Installation kannst du den Bot über das Startmenü starten; optional wird eine Desktop-Verknüpfung erstellt. Beim ersten Start öffnet sich Chrome. Melde dich bei LOTTO Niedersachsen an und bestätige anschließend im Konsolenfenster mit Enter, falls der Bot danach fragt.
+### Windows-Installer
+1. Öffne die [GitHub Actions](https://github.com/Jawollo07/bingo-bot/actions) und lade aus einem erfolgreichen Lauf **Windows installer** das Artefakt **Bingo-Bot-Setup** herunter.
+2. Starte `Bingo-Bot-Setup.exe`.
+3. Öffne Bingo Bot über das Startmenü oder die Desktop-Verknüpfung.
+4. Chrome öffnet sich beim ersten Start. Melde dich bei LOTTO Niedersachsen an.
+5. Die lokale Oberfläche öffnet sich unter http://127.0.0.1:4173. Klicke dort auf **Bingo jetzt erstellen**.
 
-Das Browserprofil der installierten Version liegt unter `%LOCALAPPDATA%\Bingo-Bot\browser-profile`, die erzeugten PDFs liegen im Installationsordner unter `downloads`. Teile das Browserprofil nicht, da es deine Anmeldung enthalten kann.
+Der Installer enthält Node.js und alle npm-Abhängigkeiten. Google Chrome muss separat installiert sein.
 
-## Linux-Pakete
+### Linux
+1. Lade aus einem erfolgreichen Lauf **Linux packages** das Artefakt **Bingo-Bot-Linux** herunter.
+2. Auf CachyOS/Arch und anderen x64-Distributionen: Archiv entpacken und `./start-linux-installed.sh` ausführen.
+3. Auf Ubuntu/Debian: `sudo apt install ./Bingo-Bot-1.3.0-amd64.deb`, anschließend **Bingo Bot** im Anwendungsmenü starten.
+4. Melde dich im geöffneten Chrome/Chromium an und nutze die Oberfläche unter http://127.0.0.1:4173.
 
-Ein Linux-Build wird über [GitHub Actions](https://github.com/Jawollo07/bingo-bot/actions/workflows/linux-packages.yml) erstellt. Öffne den erfolgreichen Lauf **Linux packages** und lade unter **Artifacts** das Archiv **Bingo-Bot-Linux** herunter.
+Node.js und npm sind im Paket enthalten. Chrome/Chromium, `curl`, `lpstat` und CUPS müssen vom Betriebssystem bereitgestellt werden. Die Pakete sind für x86-64.
 
-- **CachyOS, Arch Linux und andere Distributionen:** `Bingo-Bot-Linux-x64.tar.gz` entpacken und `./start-linux-installed.sh` ausführen.
-- **Ubuntu/Debian:** `Bingo-Bot-1.2.0-amd64.deb` herunterladen und mit `sudo apt install ./Bingo-Bot-1.2.0-amd64.deb` installieren. Danach im Anwendungsmenü nach **Bingo Bot** suchen oder `bingo-bot` starten.
-
-Die Linux-Pakete enthalten Node.js und die npm-Abhängigkeiten. Chrome/Chromium und `curl` müssen auf dem System installiert sein. Dein Browserprofil und die erzeugten PDFs liegen in `${XDG_DATA_HOME:-~/.local/share}/bingo-bot/`, unabhängig davon, wo das Programm installiert wurde. Das Archiv ist für x86-64-PCs gebaut.
-
-## Voraussetzungen für den manuellen Start
-
-1. Node.js 22 LTS oder neuer.
-2. Google Chrome oder Chromium installiert.
-3. Ein eingerichteter Standarddrucker.
-
-## Manuell starten
-
-**Windows:** Doppelklick auf `start.bat`.
-
-**Linux:** Im Projektordner `./start.sh` ausführen (falls nötig einmal `chmod +x start.sh`).
-
-Beim manuellen ersten Start installiert der Starter die npm-Pakete, öffnet Chrome/Chromium mit `--remote-debugging-port=9222` und navigiert zu LOTTO Niedersachsen. Melde dich im Browser an und bestätige die Eingabe im Terminal. Das Browserprofil wird in `.browser-profile/` gespeichert. Bei späteren Starts wird dasselbe Profil verwendet.
-
-Der Debug-Port ist ausdrücklich auf `127.0.0.1` beschränkt und wird nicht im Netzwerk freigegeben. **Starte den Browser möglichst immer über den Starter**: Ein bereits normal gestarteter Chrome kann das Debugging nicht nachträglich aktivieren und kann außerdem das Profil sperren.
-
-### Linux: Browser nicht automatisch gefunden?
-
-Du kannst den Pfad explizit angeben:
+### Aus dem Quellcode
+Voraussetzungen: Node.js 20 oder neuer, npm, Chrome/Chromium und ein Drucksystem.
 
 ```sh
-BINGO_BROWSER=/usr/bin/chromium ./start.sh
+npm ci
+npm start
 ```
 
-### Windows: Chrome an anderem Ort installiert?
+Der Starter öffnet den Browser, prüft den lokalen Debug-Endpunkt und startet die Oberfläche. Auf Linux muss `curl` vorhanden sein. Mit `BINGO_BROWSER=/pfad/zum/browser` kannst du einen abweichenden Browserpfad festlegen.
 
-Setze `BINGO_BROWSER` auf den vollständigen Pfad zu `chrome.exe`, bevor du `start.bat` ausführst, oder passe den Starter an.
+## Oberfläche
 
-## Ausgabe
+Die Oberfläche läuft ausschließlich auf `127.0.0.1` und bietet:
 
-Der Bot erwartet vier Spielschein-Links unter „Meine Spiele“. Er erstellt `downloads/TT-MM-JJJJ/bingo-alle.pdf` und sendet diese an den Standarddrucker. Falls Drucken nicht funktioniert, bleibt die PDF gespeichert und der vollständige Dateipfad wird angezeigt.
+- **Übersicht:** Bot starten und abbrechen, Status, letzter Lauf und Live-Protokoll.
+- **Einstellungen:** installierte Drucker erkennen, Drucker auswählen oder den Standarddrucker verwenden.
+- **Protokoll:** Laufmeldungen ansehen und kopieren.
 
-Optional kannst du `BINGO_PRINTER` auf den Namen eines bestimmten Druckers setzen. `BINGO_CDP_ENDPOINT` überschreibt bei Bedarf den Standard-Endpunkt `http://127.0.0.1:9222`.
+Die Einstellungen werden lokal im Benutzerprofil gespeichert. Die Oberfläche benötigt keine Cloud, keinen Account und keinen externen Webserver. Die Anmeldung bei LOTTO erfolgt weiterhin manuell im Browser.
+
+## Ablauf und Ausgabe
+
+Der Bot erwartet **genau vier unterschiedliche Spielscheine** unter „Meine Spiele“. Bei fehlender Anmeldung wartet die grafische Oberfläche bis zu fünf Minuten auf die Anmeldung. Danach werden die vier Matrizen einzeln als PDF gespeichert und paarweise zu zwei A4-Querformatseiten kombiniert.
+
+Die fertige Datei liegt im lokalen Datenordner unter `downloads/TT-MM-JJJJ/bingo-alle.pdf`. Bei einem Druckfehler bleibt die PDF erhalten und der Dateipfad wird im Protokoll ausgegeben.
+
+## Einstellungen per Umgebungsvariable
+
+| Variable | Zweck |
+|---|---|
+| `BINGO_BROWSER` | Pfad zu Chrome/Chromium |
+| `BINGO_PRINTER` | Druckername; leer bedeutet Standarddrucker |
+| `BINGO_CDP_ENDPOINT` | lokaler CDP-Endpunkt; nur localhost ist erlaubt |
+| `BINGO_UI_PORT` | Port der Oberfläche, Standard 4173 |
+| `BINGO_DATA_HOME` | Speicherort für Einstellungen und Daten |
+| `BINGO_NO_OPEN=1` | Dashboard nicht automatisch im Browser öffnen |
 
 ## Tests
 
@@ -59,11 +66,17 @@ Optional kannst du `BINGO_PRINTER` auf den Namen eines bestimmten Druckers setze
 npm test
 ```
 
-Die Tests prüfen die PDF-Erstellung ohne echtes LOTTO-Konto. Der vollständige Website- und Druckablauf hängt von der aktuellen Website, der Kontositzung und dem eingerichteten Drucker ab.
+Die automatisierten Tests prüfen die PDF-Erstellung und das Seitenlayout ohne LOTTO-Konto oder Drucker. Der Live-Ablauf hängt von der aktuellen Website, deiner Sitzung und dem Betriebssystem-Drucksystem ab.
 
-## Datenschutz und Sicherheit
+## Sicherheit und Datenschutz
 
-- Der Login erfolgt manuell im lokalen Browser; der Bot speichert keine Zugangsdaten.
-- Das Browserprofil enthält deine Anmeldung und sollte privat bleiben. Teile es nicht und committe es nicht.
-- Remote-Debugging kann Zugriff auf die Browser-Sitzung ermöglichen. Deshalb bindet der Starter den Debug-Port nur an `127.0.0.1`.
-- Der Bot druckt automatisch, sobald die PDF erfolgreich erstellt wurde. Prüfe bei Bedarf die Druckerauswahl vor dem Start.
+- Das Dashboard bindet ausschließlich an `127.0.0.1`; es wird nicht im LAN oder Internet veröffentlicht.
+- Remote-Debugging ist ausschließlich auf localhost zulässig.
+- Browserprofil und Login-Sitzung bleiben lokal. Teile den Profilordner nicht und committe ihn niemals.
+- Der Bot speichert keine LOTTO-Zugangsdaten.
+- Spielschein- und Matrixnavigation wird auf die offizielle LOTTO-Niedersachsen-Domain beschränkt.
+- PDF-Ausgaben und Einstellungen werden lokal gespeichert. Du kannst den Datenordner jederzeit selbst sichern oder löschen.
+
+## Entwicklung
+
+`index.js` enthält den Browser- und PDF-Ablauf, `pdf-layout.js` erstellt das druckfertige Layout, `ui-server.js` stellt die lokale API bereit und `public/` enthält die Oberfläche. Der Bot kann weiterhin unabhängig über `npm run bot` in der Konsole gestartet werden.
