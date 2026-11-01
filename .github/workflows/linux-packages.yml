@@ -79,6 +79,6 @@ jobs:
           name: Bingo-Bot-Linux
           path: |
             dist/Bingo-Bot-Linux-x64.tar.gz
-            dist/Bingo-Bot-1.4.0-amd64.deb
+            dist/Bingo-Bot-*-amd64.deb
           if-no-files-found: error
           retention-days: 30
