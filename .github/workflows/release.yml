@@ -21,11 +21,12 @@ jobs:
     outputs:
       tag: ${{ steps.version.outputs.tag }}
       version: ${{ steps.version.outputs.version }}
+      checkout_ref: ${{ steps.version.outputs.checkout_ref }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.tag || github.ref }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.ref }}
       - name: Read and validate version
         id: version
         shell: bash
@@ -41,6 +42,7 @@ jobs:
           fi
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "checkout_ref=$GITHUB_SHA" >> "$GITHUB_OUTPUT"
 
   build-windows:
     name: Build Windows installer
@@ -50,7 +52,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.version.outputs.tag }}
+          ref: ${{ needs.version.outputs.checkout_ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -97,7 +99,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.version.outputs.tag }}
+          ref: ${{ needs.version.outputs.checkout_ref }}
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -168,6 +170,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.version.outputs.tag }}
+          target_commitish: ${{ needs.version.outputs.checkout_ref }}
           name: Bingo-Bot ${{ needs.version.outputs.tag }}
           generate_release_notes: true
           make_latest: true
