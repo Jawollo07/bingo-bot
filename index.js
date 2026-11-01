@@ -41,25 +41,76 @@ async function getSpielscheine(page) {
     }).filter(Boolean));
     return [...new Map(found.map((item) => [item.id, item])).values()];
 }
+async function isLoggedIn(page) {
+    let current;
+    try { current = new URL(page.url()); } catch { return false; }
+
+    // LOTTO leitet nicht angemeldete Besucher normalerweise auf die Anmeldeseite um.
+    // Entscheidend ist deshalb der tatsächlich geladene Kontobereich – nicht,
+    // ob die Spielschein-Links bereits im DOM stehen.
+    const accountPage = current.origin === LOTTO_ORIGIN &&
+        current.pathname.startsWith("/spielkonto/");
+
+    const passwordFields = page.locator('input[type="password"]');
+    const hasVisibleLoginForm = await passwordFields.count().then(async (count) => {
+        for (let i = 0; i < count; i++) {
+            if (await passwordFields.nth(i).isVisible().catch(() => false)) return true;
+        }
+        return false;
+    });
+
+    return accountPage && !hasVisibleLoginForm;
+}
+
+async function waitForSpielscheine(page, timeoutMs = 15_000) {
+    const deadline = Date.now() + timeoutMs;
+    let spiele = [];
+    while (Date.now() < deadline) {
+        spiele = await getSpielscheine(page);
+        if (spiele.length === 4) return spiele;
+        await sleep(500);
+    }
+    return spiele;
+}
+
 async function waitForLoginIfNeeded(page) {
-    let spiele = await getSpielscheine(page);
-    if (spiele.length === 4) return spiele;
+    // Bereits angemeldete Nutzer dürfen nicht fünf Minuten auf die
+    // manuelle Login-Erkennung warten, nur weil die Spielscheine später laden.
+    if (await isLoggedIn(page)) {
+        console.log("✓ LOTTO-Konto ist bereits angemeldet – prüfe Spielscheine …");
+        const spiele = await waitForSpielscheine(page);
+        if (spiele.length === 4) return spiele;
+        throw new Error(`LOTTO-Anmeldung erkannt, aber es wurden nur ${spiele.length} von 4 Spielscheinen gefunden. Bitte „Meine Spiele“ im Browser prüfen.`);
+    }
+
     console.log("\n🔐 Bitte melde dich im geöffneten Browser bei LOTTO Niedersachsen an.");
     if (process.stdin.isTTY) {
         const rl = readline.createInterface({ input, output });
         try { await rl.question("Nach erfolgreicher Anmeldung hier ENTER drücken … "); } finally { rl.close(); }
         await navigate(page, ACCOUNT_URL);
-        spiele = await getSpielscheine(page);
-    } else {
-        console.log("Warte bis zu 5 Minuten auf deine Anmeldung …");
-        for (let attempt = 0; attempt < 120 && spiele.length !== 4; attempt++) {
-            await sleep(2500);
-            spiele = await getSpielscheine(page);
-            if (spiele.length !== 4 && attempt % 12 === 11) console.log("Anmeldung noch nicht erkannt – warte weiter …");
-        }
+        if (!(await isLoggedIn(page))) throw new Error("Anmeldung wurde nicht erkannt. Bitte prüfen, ob LOTTO die Anmeldung übernommen hat.");
+        const spiele = await waitForSpielscheine(page);
+        if (spiele.length !== 4) throw new Error(`Anmeldung erkannt, aber genau 4 Spielscheine werden benötigt; gefunden: ${spiele.length}.`);
+        return spiele;
     }
-    if (spiele.length !== 4) throw new Error(`Es werden genau 4 Spielscheine benötigt; gefunden: ${spiele.length}. Bitte Anmeldung und „Meine Spiele“ prüfen.`);
-    return spiele;
+
+    console.log("Warte bis zu 5 Minuten auf deine Anmeldung …");
+    const deadline = Date.now() + 5 * 60_000;
+    let lastCount = -1;
+    while (Date.now() < deadline) {
+        if (await isLoggedIn(page)) {
+            const spiele = await waitForSpielscheine(page, 15_000);
+            if (spiele.length === 4) return spiele;
+            throw new Error(`Anmeldung erkannt, aber genau 4 Spielscheine werden benötigt; gefunden: ${spiele.length}. Bitte „Meine Spiele“ prüfen.`);
+        }
+        const count = (await getSpielscheine(page)).length;
+        if (count !== lastCount) {
+            console.log(`Anmeldung noch nicht erkannt (Spielscheine: ${count}/4) …`);
+            lastCount = count;
+        }
+        await sleep(1000);
+    }
+    throw new Error("Zeitüberschreitung: LOTTO-Anmeldung wurde innerhalb von 5 Minuten nicht erkannt.");
 }
 async function getBingoLink(page) {
     const links = await page.locator('a[href*="/bingomatrix"]').evaluateAll((els) => els.map((a) => a.href).filter((href) => {
