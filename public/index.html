@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#111827">
+  <title>Bingo Bot</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <div class="brand"><div class="brand-icon">🎱</div><div><strong>Bingo Bot</strong><small>LOTTO Niedersachsen</small></div></div>
+      <nav aria-label="Hauptnavigation">
+        <button class="nav active" data-view="overview"><span>▦</span> Übersicht</button>
+        <button class="nav" data-view="settings"><span>⚙</span> Einstellungen</button>
+        <button class="nav" data-view="history"><span>◷</span> Protokoll</button>
+      </nav>
+      <div class="side-foot"><span class="dot"></span> Lokal auf diesem Gerät</div>
+    </aside>
+    <main>
+      <header class="topbar"><div><div class="eyebrow">BINGO AUTOMATION</div><h1 id="page-title">Übersicht</h1></div><div class="local-pill"><span class="dot"></span> Lokale Sitzung</div></header>
+      <section class="view active" id="view-overview">
+        <div class="hero">
+          <div><div class="eyebrow light">DEIN SPIELSCHEIN-ASSISTENT</div><h2>Bereit für Bingo?</h2><p>Vier Matrizen abrufen, sauber als PDF zusammenstellen und drucken.</p>
+            <div class="actions"><button class="primary" id="start">▶&nbsp; Bingo jetzt erstellen</button><button class="secondary" id="stop" disabled>Abbrechen</button></div>
+          </div><div class="hero-ball">B</div>
+        </div>
+        <div class="stats">
+          <article class="stat"><span class="stat-label">STATUS</span><strong id="status">Bereit</strong><small id="status-detail">Wartet auf deinen Start</small></article>
+          <article class="stat"><span class="stat-label">LETZTER LAUF</span><strong id="last-run">–</strong><small id="last-result">Noch kein Lauf gestartet</small></article>
+          <article class="stat"><span class="stat-label">DRUCKER</span><strong id="printer-name">Standard</strong><small>Aus Einstellungen</small></article>
+        </div>
+        <section class="panel progress-panel"><div class="panel-head"><div><h3>Fortschritt & Ausgabe</h3><p>Live-Protokoll des aktuellen Vorgangs</p></div><span class="status-chip" id="chip">Bereit</span></div>
+          <div class="progress-track"><div id="progress-bar"></div></div><div class="log" id="log" aria-live="polite"><div class="empty">Noch keine Ausgabe. Starte einen Lauf, um hier den Fortschritt zu sehen.</div></div>
+        </section>
+        <div class="hint"><span>ⓘ</span><p>Chrome muss über den Bingo-Bot-Starter geöffnet sein und du musst bei LOTTO Niedersachsen angemeldet sein. Deine Anmeldung bleibt in deinem lokalen Browserprofil.</p></div>
+      </section>
+      <section class="view" id="view-settings">
+        <div class="panel settings-panel"><div class="panel-head"><div><h3>Druckeinstellungen</h3><p>Lege fest, wohin die fertige PDF gesendet wird.</p></div></div>
+          <label for="printer">Drucker</label><div class="inline-field"><select id="printer"><option value="">Standarddrucker verwenden</option></select><button class="secondary small" id="refresh-printers">Neu laden</button></div><small class="muted" id="printer-help">Die verfügbaren Drucker werden vom Betriebssystem ermittelt.</small>
+          <div class="settings-actions"><button class="primary" id="save-settings">Einstellungen speichern</button><span id="save-message" role="status"></span></div>
+        </div>
+        <div class="panel"><h3>Speicherort</h3><p class="muted">PDFs und lokale Einstellungen werden in deinem Benutzerprofil gespeichert. Browserdaten und Login bleiben auf deinem Gerät.</p></div>
+      </section>
+      <section class="view" id="view-history">
+        <div class="panel"><div class="panel-head"><div><h3>Letztes Protokoll</h3><p>Die letzten Meldungen des aktuellen bzw. letzten Bot-Laufs.</p></div><button class="secondary small" id="copy-log">Protokoll kopieren</button></div><div class="log history-log" id="history-log"><div class="empty">Noch kein Protokoll vorhanden.</div></div></div>
+      </section>
+      <footer> BINGO BOT <span>•</span> Läuft ausschließlich lokal auf 127.0.0.1</footer>
+    </main>
+  </div>
+  <script src="/app.js" defer></script>
+</body>
+</html>
