@@ -1,5 +1,5 @@
 #define MyAppName "Bingo Bot"
-#define MyAppVersion "1.3.0"
+#define MyAppVersion "1.4.0"
 #define MyAppPublisher "Jawollo07"
 #define MyAppExeName "start-installed.bat"
 #define SourceDir "..\dist\Bingo-Bot"
