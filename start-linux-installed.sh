@@ -68,7 +68,10 @@ if ! curl --silent --fail "$DEBUG_URL" >/dev/null; then
   exit 1
 fi
 
-"$NODE_BIN" "$APP_DIR/index.js"
-STATUS=$?
+if "$NODE_BIN" "$APP_DIR/ui-server.js"; then
+  STATUS=0
+else
+  STATUS=$?
+fi
 read -r -p "Enter zum Schließen ..."
 exit "$STATUS"

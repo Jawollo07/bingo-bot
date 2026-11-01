@@ -34,7 +34,8 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist/bundle/runtime dist/bundle/bin dist/bundle/share/applications
-          cp index.js pdf-layout.js package.json start-linux-installed.sh dist/bundle/
+          cp index.js pdf-layout.js ui-server.js package.json start-linux-installed.sh dist/bundle/
+          cp -a public dist/bundle/public
           cp start-linux-installed.sh dist/bundle/bin/bingo-bot
           chmod +x dist/bundle/start-linux-installed.sh dist/bundle/bin/bingo-bot
           cp "$(command -v node)" dist/bundle/runtime/node
@@ -58,17 +59,17 @@ jobs:
           cp packaging/bingo-bot.desktop "$PKG/usr/share/applications/bingo-bot.desktop"
           cat > "$PKG/DEBIAN/control" <<'CONTROL'
           Package: bingo-bot
-          Version: 1.2.0
+          Version: 1.3.0
           Section: utils
           Priority: optional
           Architecture: amd64
           Maintainer: Jawollo07
-          Depends: libc6, libstdc++6, curl
+          Depends: libc6, libstdc++6, curl, cups-client, xdg-utils
           Description: Bingo Bot für LOTTO Niedersachsen
            Erstellt eine zweiseitige PDF mit vier BINGO-Matrizen und druckt sie.
           CONTROL
           chmod 0755 "$PKG/DEBIAN"
-          dpkg-deb --root-owner-group --build "$PKG" dist/Bingo-Bot-1.2.0-amd64.deb
+          dpkg-deb --root-owner-group --build "$PKG" dist/Bingo-Bot-1.3.0-amd64.deb
           dpkg-deb --info dist/Bingo-Bot-1.2.0-amd64.deb
 
       - name: Upload Linux packages
