@@ -140,8 +140,13 @@ const server = http.createServer((req, res) => {
   handle(req, res).catch((error) => send(res, 500, { error: error.message }));
 });
 server.listen(PORT, HOST, () => {
-  console.log(`Bingo Bot UI: http://${HOST}:${PORT}`);
+  const url = `http://${HOST}:${PORT}`;
+  console.log(`Bingo Bot UI: ${url}`);
   console.log("Die Oberfläche ist ausschließlich auf diesem Gerät erreichbar.");
+  if (process.env.BINGO_NO_OPEN !== "1") {
+    const opener = spawn("xdg-open", [url], { detached: true, stdio: "ignore" });
+    opener.unref();
+  }
 });
 for (const signal of ["SIGINT", "SIGTERM"]) process.on(signal, () => {
   if (child) child.kill("SIGTERM");
