@@ -23,7 +23,6 @@ for /l %%i in (1,1,30) do (
 )
 echo Debug-Browser konnte nicht gestartet werden.& goto :error
 :runui
-start "" http://127.0.0.1:4173
 "%NODE_BIN%" "%~dp0ui-server.js"
 set "BOT_EXIT=%ERRORLEVEL%"
 echo.
