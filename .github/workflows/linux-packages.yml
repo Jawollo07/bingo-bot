@@ -52,6 +52,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          VERSION=$(node -p "require('./package.json').version")
           PKG="dist/deb-root"
           mkdir -p "$PKG/DEBIAN" "$PKG/opt/bingo-bot" "$PKG/usr/bin" "$PKG/usr/share/applications"
           cp -a dist/bundle/. "$PKG/opt/bingo-bot/"
@@ -59,7 +60,7 @@ jobs:
           cp packaging/bingo-bot.desktop "$PKG/usr/share/applications/bingo-bot.desktop"
           cat > "$PKG/DEBIAN/control" <<'CONTROL'
           Package: bingo-bot
-          Version: 1.3.0
+          Version: $VERSION
           Section: utils
           Priority: optional
           Architecture: amd64
@@ -69,8 +70,8 @@ jobs:
            Erstellt eine zweiseitige PDF mit vier BINGO-Matrizen und druckt sie.
           CONTROL
           chmod 0755 "$PKG/DEBIAN"
-          dpkg-deb --root-owner-group --build "$PKG" dist/Bingo-Bot-1.3.0-amd64.deb
-          dpkg-deb --info dist/Bingo-Bot-1.2.0-amd64.deb
+          dpkg-deb --root-owner-group --build "$PKG" dist/Bingo-Bot-$VERSION-amd64.deb
+          dpkg-deb --info dist/Bingo-Bot-$VERSION-amd64.deb
 
       - name: Upload Linux packages
         uses: actions/upload-artifact@v4
