@@ -38,8 +38,29 @@ function renderStatus(data) {
   $("progress-bar").style.width = data.running ? "65%" : data.exitCode === 0 ? "100%" : data.exitCode !== null ? "100%" : "0%";
   renderLogs(data.logs);
 }
+async function loadLatestOutput() {
+  const link = $("open-pdf");
+  try {
+    const { output } = await api("/api/latest-output");
+    if (!output) {
+      link.hidden = true;
+      link.removeAttribute("href");
+      return;
+    }
+    link.href = "/api/output?file=" + encodeURIComponent(output.file);
+    link.hidden = false;
+    link.title = `PDF vom ${new Date(output.modifiedAt).toLocaleString("de-DE")} · ${Math.round(output.size / 1024)} KB`;
+  } catch {
+    link.hidden = true;
+    link.removeAttribute("href");
+  }
+}
 async function refresh() {
-  try { renderStatus(await api("/api/status")); } catch (error) { $("status-detail").textContent = error.message; }
+  try {
+    const status = await api("/api/status");
+    renderStatus(status);
+    if (!status.running) await loadLatestOutput();
+  } catch (error) { $("status-detail").textContent = error.message; }
 }
 async function loadPrinters() {
   $("printer-help").textContent = "Suche verfügbare Drucker …";

@@ -54,7 +54,6 @@ async function waitForLoginIfNeeded(page) {
         console.log("Warte bis zu 5 Minuten auf deine Anmeldung …");
         for (let attempt = 0; attempt < 120 && spiele.length !== 4; attempt++) {
             await sleep(2500);
-            if (page.url() !== ACCOUNT_URL) await navigate(page, ACCOUNT_URL);
             spiele = await getSpielscheine(page);
             if (spiele.length !== 4 && attempt % 12 === 11) console.log("Anmeldung noch nicht erkannt – warte weiter …");
         }

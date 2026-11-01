@@ -58,7 +58,7 @@ jobs:
           cp -a dist/bundle/. "$PKG/opt/bingo-bot/"
           ln -s /opt/bingo-bot/bin/bingo-bot "$PKG/usr/bin/bingo-bot"
           cp packaging/bingo-bot.desktop "$PKG/usr/share/applications/bingo-bot.desktop"
-          cat > "$PKG/DEBIAN/control" <<'CONTROL'
+          cat > "$PKG/DEBIAN/control" <<CONTROL
           Package: bingo-bot
           Version: $VERSION
           Section: utils
@@ -79,6 +79,6 @@ jobs:
           name: Bingo-Bot-Linux
           path: |
             dist/Bingo-Bot-Linux-x64.tar.gz
-            dist/Bingo-Bot-1.2.0-amd64.deb
+            dist/Bingo-Bot-*-amd64.deb
           if-no-files-found: error
           retention-days: 30

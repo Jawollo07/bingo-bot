@@ -15,6 +15,7 @@ const DATA = process.env.BINGO_DATA_HOME ?? (process.env.LOCALAPPDATA
 const SETTINGS = path.join(DATA, "settings.json");
 const execFileAsync = promisify(execFile);
 const PORT = Number(process.env.BINGO_UI_PORT ?? 4173);
+if (!Number.isInteger(PORT) || PORT < 1 || PORT > 65535) throw new Error("BINGO_UI_PORT muss eine gültige Portnummer (1–65535) sein.");
 const HOST = "127.0.0.1";
 let child = null;
 let run = { running: false, startedAt: null, finishedAt: null, exitCode: null, logs: [] };
@@ -27,7 +28,9 @@ async function readSettings() {
 }
 async function saveSettings(settings) {
   await fs.mkdir(DATA, { recursive: true });
-  await fs.writeFile(SETTINGS, JSON.stringify(settings, null, 2), { mode: 0o600 });
+  const temporary = `${SETTINGS}.${process.pid}.tmp`;
+  await fs.writeFile(temporary, JSON.stringify(settings, null, 2), { mode: 0o600 });
+  await fs.rename(temporary, SETTINGS);
 }
 function log(line) {
   run.logs.push({ time: new Date().toISOString(), line: String(line).slice(0, 2000) });
@@ -56,10 +59,33 @@ async function printers() {
   const { stdout } = await execFileAsync("lpstat", ["-p"], { timeout: 8000 });
   return stdout.split(/\r?\n/).map((x) => x.match(/^printer\s+(.+?)\s/)?.[1]).filter(Boolean);
 }
+async function latestOutput() {
+  const root = path.resolve(DATA, "downloads");
+  let entries;
+  try { entries = await fs.readdir(root, { withFileTypes: true }); }
+  catch { return null; }
+  const candidates = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    const file = path.join(root, entry.name, "bingo-alle.pdf");
+    try {
+      const stat = await fs.stat(file);
+      if (stat.isFile()) candidates.push({ file, mtimeMs: stat.mtimeMs, size: stat.size });
+    } catch {}
+  }
+  candidates.sort((a, b) => b.mtimeMs - a.mtimeMs);
+  const latest = candidates[0];
+  return latest ? {
+    file: path.relative(root, latest.file).split(path.sep).join("/"),
+    modifiedAt: new Date(latest.mtimeMs).toISOString(),
+    size: latest.size
+  } : null;
+}
 async function handle(req, res) {
-  const url = new URL(req.url, "http://localhost");
+  const url = new URL(req.url, "http://127.0.0.1");
   if (req.method === "GET" && url.pathname === "/api/status") return send(res, 200, status());
   if (req.method === "GET" && url.pathname === "/api/settings") return send(res, 200, await readSettings());
+  if (req.method === "GET" && url.pathname === "/api/latest-output") return send(res, 200, { output: await latestOutput() });
   if (req.method === "GET" && url.pathname === "/api/printers") {
     try { return send(res, 200, { printers: await printers() }); }
     catch (error) { return send(res, 200, { printers: [], warning: error.message }); }
@@ -112,10 +138,21 @@ async function handle(req, res) {
     const requested = path.resolve(root, url.searchParams.get("file") ?? "");
     if (!requested.startsWith(root + path.sep)) return send(res, 400, { error: "Ungültiger Dateipfad." });
     try {
-      const stat = await fs.stat(requested);
-      if (!stat.isFile() || !requested.toLowerCase().endsWith(".pdf")) return send(res, 404, { error: "PDF nicht gefunden." });
-      res.writeHead(200, { "content-type": "application/pdf", "content-length": stat.size, "content-disposition": 'inline; filename="bingo-alle.pdf"' });
-      return createReadStream(requested).pipe(res);
+      const realRoot = await fs.realpath(root);
+      const realFile = await fs.realpath(requested);
+      if (!realFile.startsWith(realRoot + path.sep) || !realFile.toLowerCase().endsWith(".pdf")) {
+        return send(res, 404, { error: "PDF nicht gefunden." });
+      }
+      const stat = await fs.stat(realFile);
+      if (!stat.isFile()) return send(res, 404, { error: "PDF nicht gefunden." });
+      res.writeHead(200, {
+        "content-type": "application/pdf",
+        "content-length": stat.size,
+        "content-disposition": 'inline; filename="bingo-alle.pdf"',
+        "x-content-type-options": "nosniff",
+        "cache-control": "no-store"
+      });
+      return createReadStream(realFile).pipe(res);
     } catch { return send(res, 404, { error: "PDF nicht gefunden." }); }
   }
   if (req.method === "GET" && url.pathname === "/") {
@@ -136,7 +173,19 @@ async function handle(req, res) {
   return send(res, 404, { error: "Nicht gefunden." });
 }
 await fs.mkdir(DATA, { recursive: true });
+const allowedHosts = new Set([`127.0.0.1:${PORT}`, `localhost:${PORT}`, `[::1]:${PORT}`]);
 const server = http.createServer((req, res) => {
+  const host = String(req.headers.host ?? "").toLowerCase();
+  if (!allowedHosts.has(host)) return send(res, 403, { error: "Ungültiger Host-Header." });
+  const origin = req.headers.origin;
+  if (origin) {
+    try {
+      const parsed = new URL(origin);
+      if (!["127.0.0.1", "localhost", "::1"].includes(parsed.hostname) || parsed.port !== String(PORT)) {
+        return send(res, 403, { error: "Cross-Origin-Anfrage blockiert." });
+      }
+    } catch { return send(res, 403, { error: "Ungültiger Origin-Header." }); }
+  }
   handle(req, res).catch((error) => send(res, 500, { error: error.message }));
 });
 server.listen(PORT, HOST, () => {
