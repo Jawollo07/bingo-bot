@@ -1,6 +1,6 @@
 {
   "name": "bingo-bot",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Bingo Bot für LOTTO Niedersachsen mit lokaler Weboberfläche, PDF-Erstellung und Druckverwaltung.",
   "main": "index.js",
   "scripts": {
@@ -9,11 +9,18 @@
     "bot": "node index.js",
     "test": "node --test"
   },
-  "keywords": ["bingo", "playwright", "pdf", "lotto-niedersachsen"],
+  "keywords": [
+    "bingo",
+    "playwright",
+    "pdf",
+    "lotto-niedersachsen"
+  ],
   "author": "Jawollo07",
   "license": "ISC",
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "@types/node": "^26.6.4"
