@@ -1,4 +1,5 @@
 import http from "node:http";
+import { createReadStream } from "node:fs";
 import fs from "node:fs/promises";
 import path from "node:path";
 import os from "node:os";
@@ -114,7 +115,7 @@ async function handle(req, res) {
       const stat = await fs.stat(requested);
       if (!stat.isFile() || !requested.toLowerCase().endsWith(".pdf")) return send(res, 404, { error: "PDF nicht gefunden." });
       res.writeHead(200, { "content-type": "application/pdf", "content-length": stat.size, "content-disposition": 'inline; filename="bingo-alle.pdf"' });
-      return fs.createReadStream(requested).pipe(res);
+      return createReadStream(requested).pipe(res);
     } catch { return send(res, 404, { error: "PDF nicht gefunden." }); }
   }
   if (req.method === "GET" && url.pathname === "/") {
