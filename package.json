@@ -1,20 +1,19 @@
 {
   "name": "bingo-bot",
-  "version": "1.2.0",
-  "description": "Einfach startbarer Bingo-Bot für LOTTO Niedersachsen: vier Matrizen, zweiseitige PDF und Druck.",
+  "version": "1.3.0",
+  "description": "Bingo Bot für LOTTO Niedersachsen mit lokaler Weboberfläche, PDF-Erstellung und Druckverwaltung.",
   "main": "index.js",
   "scripts": {
-    "dev": "node index.js",
-    "start": "node index.js",
+    "dev": "node ui-server.js",
+    "start": "node ui-server.js",
+    "bot": "node index.js",
     "test": "node --test"
   },
   "keywords": ["bingo", "playwright", "pdf", "lotto-niedersachsen"],
-  "author": "",
+  "author": "Jawollo07",
   "license": "ISC",
   "type": "module",
-  "engines": {
-    "node": ">=20"
-  },
+  "engines": { "node": ">=20" },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "@types/node": "^26.6.4"
