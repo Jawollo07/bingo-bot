@@ -25,14 +25,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.inputs.tag || github.ref }}
+          ref: ${{ inputs.tag || github.ref }}
       - name: Read and validate version
         id: version
         shell: bash
+        env:
+          RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           set -euo pipefail
           VERSION="$(node -p "require('./package.json').version")"
-          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          TAG="$RELEASE_TAG"
           if [[ "$TAG" != "v$VERSION" ]]; then
             echo "Tag $TAG does not match package.json version v$VERSION" >&2
             exit 1
