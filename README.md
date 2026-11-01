@@ -2,7 +2,7 @@
 
 Der Bingo Bot öffnet einen lokalen Browser mit deinem LOTTO-Niedersachsen-Konto, liest genau vier BINGO-Spielscheine aus, erzeugt daraus eine zweiseitige A4-Querformat-PDF und kann sie an einen ausgewählten Drucker senden.
 
-**Neu in 1.3.0:** lokale grafische Oberfläche, Druckerauswahl, Live-Protokoll, Abbruchfunktion, persistente Einstellungen sowie robustere Browser- und Fehlerbehandlung.
+**Neu in 1.4.0:** direkter PDF-Aufruf im Dashboard, stabilerer Login-Ablauf, zusätzliche Absicherung der lokalen API, sichere Einstellungs- und PDF-Pfadbehandlung sowie erweiterte automatisierte Tests.
 
 ## Starten
 
@@ -18,7 +18,7 @@ Der Installer enthält Node.js und alle npm-Abhängigkeiten. Google Chrome muss 
 ### Linux
 1. Lade aus einem erfolgreichen Lauf **Linux packages** das Artefakt **Bingo-Bot-Linux** herunter.
 2. Auf CachyOS/Arch und anderen x64-Distributionen: Archiv entpacken und `./start-linux-installed.sh` ausführen.
-3. Auf Ubuntu/Debian: `sudo apt install ./Bingo-Bot-1.3.0-amd64.deb`, anschließend **Bingo Bot** im Anwendungsmenü starten.
+3. Auf Ubuntu/Debian: `sudo apt install ./Bingo-Bot-1.4.0-amd64.deb`, anschließend **Bingo Bot** im Anwendungsmenü starten.
 4. Melde dich im geöffneten Chrome/Chromium an und nutze die Oberfläche unter http://127.0.0.1:4173.
 
 Node.js und npm sind im Paket enthalten. Chrome/Chromium, `curl`, `lpstat` und CUPS müssen vom Betriebssystem bereitgestellt werden. Die Pakete sind für x86-64.
@@ -37,7 +37,7 @@ Der Starter öffnet den Browser, prüft den lokalen Debug-Endpunkt und startet d
 
 Die Oberfläche läuft ausschließlich auf `127.0.0.1` und bietet:
 
-- **Übersicht:** Bot starten und abbrechen, Status, letzter Lauf und Live-Protokoll.
+- **Übersicht:** Bot starten und abbrechen, Status, letzter Lauf, Live-Protokoll und die zuletzt erzeugte PDF direkt öffnen.
 - **Einstellungen:** installierte Drucker erkennen, Drucker auswählen oder den Standarddrucker verwenden.
 - **Protokoll:** Laufmeldungen ansehen und kopieren.
 
@@ -66,7 +66,7 @@ Die fertige Datei liegt im lokalen Datenordner unter `downloads/TT-MM-JJJJ/bingo
 npm test
 ```
 
-Die automatisierten Tests prüfen die PDF-Erstellung und das Seitenlayout ohne LOTTO-Konto oder Drucker. Der Live-Ablauf hängt von der aktuellen Website, deiner Sitzung und dem Betriebssystem-Drucksystem ab.
+Die automatisierten Tests prüfen die PDF-Erstellung, das Seitenlayout und die lokale Dashboard-API einschließlich Host-/Origin-Schutz ohne LOTTO-Konto oder Drucker. Der Live-Ablauf hängt von der aktuellen Website, deiner Sitzung und dem Betriebssystem-Drucksystem ab.
 
 ## Sicherheit und Datenschutz
 
