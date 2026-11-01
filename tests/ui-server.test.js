@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import net from "node:net";
+import http from "node:http";
 import { spawn } from "node:child_process";
 
 async function unusedPort() {
@@ -56,8 +57,20 @@ test("local dashboard validates requests and persists settings", async (t) => {
   response = await fetch(`${base}/api/settings`);
   assert.equal((await response.json()).printer, "Test Printer");
 
-  response = await fetch(`${base}/api/status`, { headers: { host: `attacker.invalid:${port}` } });
-  assert.equal(response.status, 403);
+  const hostGuardStatus = await new Promise((resolve, reject) => {
+    const request = http.request({
+      hostname: "127.0.0.1",
+      port,
+      path: "/api/status",
+      headers: { host: `attacker.invalid:${port}` }
+    }, (res) => {
+      res.resume();
+      res.once("end", () => resolve(res.statusCode));
+    });
+    request.once("error", reject);
+    request.end();
+  });
+  assert.equal(hostGuardStatus, 403);
 
   response = await fetch(`${base}/api/status`, { headers: { origin: "https://attacker.invalid" } });
   assert.equal(response.status, 403);
