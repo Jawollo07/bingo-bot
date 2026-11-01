@@ -69,7 +69,9 @@ async function waitForSpielscheine(page, timeoutMs = 15_000) {
     while (Date.now() < deadline) {
         spiele = await getSpielscheine(page);
         if (spiele.length >= REQUIRED_SPIELSCHEINE) {
-            if (spiele.length > REQUIRED_SPIELSCHEINE) console.warn(`ℹ️ ${spiele.length} Spielscheine gefunden; für das aktuelle Drucklayout werden die ersten ${REQUIRED_SPIELSCHEINE} verwendet.`);
+            if (spiele.length > REQUIRED_SPIELSCHEINE) {
+                console.warn(`ℹ️ ${spiele.length} Spielscheine gefunden; für das aktuelle Drucklayout werden die ersten ${REQUIRED_SPIELSCHEINE} verwendet.`);
+            }
             return selectSpielscheine(spiele);
         }
         await sleep(500);
@@ -83,23 +85,20 @@ async function waitForLoginIfNeeded(page) {
     if (await isLoggedIn(page)) {
         console.log("✓ LOTTO-Konto ist bereits angemeldet – prüfe Spielscheine …");
         const spiele = await waitForSpielscheine(page);
-        if (spiele.length >= REQUIRED_SPIELSCHEINE) {
-            if (spiele.length > REQUIRED_SPIELSCHEINE) console.warn(`ℹ️ ${spiele.length} Spielscheine gefunden; für das aktuelle Drucklayout werden die ersten ${REQUIRED_SPIELSCHEINE} verwendet.`);
-            return selectSpielscheine(spiele);
-        }
-        throw new Error(`LOTTO-Anmeldung erkannt, aber es wurden nur ${spiele.length} von 4 Spielscheinen gefunden. Bitte „Meine Spiele“ im Browser prüfen.`);
+        if (spiele.length === REQUIRED_SPIELSCHEINE) return spiele;
+        throw new Error(`LOTTO-Anmeldung erkannt, aber es wurden nur ${spiele.length} von ${REQUIRED_SPIELSCHEINE} Spielscheinen gefunden. Bitte „Meine Spiele“ im Browser prüfen.`);
     }
 
-    console.log("\n🔐 Bitte melde dich im geöffneten Browser bei LOTTO Niedersachsen an.");
+    console.log("\\n🔐 Bitte melde dich im geöffneten Browser bei LOTTO Niedersachsen an.");
     if (process.stdin.isTTY) {
         const rl = readline.createInterface({ input, output });
         try { await rl.question("Nach erfolgreicher Anmeldung hier ENTER drücken … "); } finally { rl.close(); }
         await navigate(page, ACCOUNT_URL);
         if (!(await isLoggedIn(page))) throw new Error("Anmeldung wurde nicht erkannt. Bitte prüfen, ob LOTTO die Anmeldung übernommen hat.");
         const spiele = await waitForSpielscheine(page);
-        if (spiele.length < REQUIRED_SPIELSCHEINE) throw new Error(`Anmeldung erkannt, aber es werden ${REQUIRED_SPIELSCHEINE} Spielscheine benötigt; gefunden: ${spiele.length}.`);
-        if (spiele.length > REQUIRED_SPIELSCHEINE) console.warn(`ℹ️ ${spiele.length} Spielscheine gefunden; für das aktuelle Drucklayout werden die ersten ${REQUIRED_SPIELSCHEINE} verwendet.`);
-        return selectSpielscheine(spiele);
+        if (spiele.length !== REQUIRED_SPIELSCHEINE) {
+            throw new Error(`Anmeldung erkannt, aber es werden ${REQUIRED_SPIELSCHEINE} Spielscheine benötigt; gefunden: ${spiele.length}.`);
+        }
         return spiele;
     }
 
@@ -109,12 +108,12 @@ async function waitForLoginIfNeeded(page) {
     while (Date.now() < deadline) {
         if (await isLoggedIn(page)) {
             const spiele = await waitForSpielscheine(page, 15_000);
-            if (spiele.length === 4) return spiele;
-            throw new Error(`Anmeldung erkannt, aber genau 4 Spielscheine werden benötigt; gefunden: ${spiele.length}. Bitte „Meine Spiele“ prüfen.`);
+            if (spiele.length === REQUIRED_SPIELSCHEINE) return spiele;
+            throw new Error(`Anmeldung erkannt, aber es werden ${REQUIRED_SPIELSCHEINE} Spielscheine benötigt; gefunden: ${spiele.length}. Bitte „Meine Spiele“ prüfen.`);
         }
         const count = (await getSpielscheine(page)).length;
         if (count !== lastCount) {
-            console.log(`Anmeldung noch nicht erkannt (Spielscheine: ${count}/4) …`);
+            console.log(`Anmeldung noch nicht erkannt (Spielscheine: ${count}/${REQUIRED_SPIELSCHEINE}) …`);
             lastCount = count;
         }
         await sleep(1000);
