@@ -56,10 +56,33 @@ async function printers() {
   const { stdout } = await execFileAsync("lpstat", ["-p"], { timeout: 8000 });
   return stdout.split(/\r?\n/).map((x) => x.match(/^printer\s+(.+?)\s/)?.[1]).filter(Boolean);
 }
+async function latestOutput() {
+  const root = path.resolve(DATA, "downloads");
+  let entries;
+  try { entries = await fs.readdir(root, { withFileTypes: true }); }
+  catch { return null; }
+  const candidates = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue;
+    const file = path.join(root, entry.name, "bingo-alle.pdf");
+    try {
+      const stat = await fs.stat(file);
+      if (stat.isFile()) candidates.push({ file, mtimeMs: stat.mtimeMs, size: stat.size });
+    } catch {}
+  }
+  candidates.sort((a, b) => b.mtimeMs - a.mtimeMs);
+  const latest = candidates[0];
+  return latest ? {
+    file: path.relative(root, latest.file).split(path.sep).join("/"),
+    modifiedAt: new Date(latest.mtimeMs).toISOString(),
+    size: latest.size
+  } : null;
+}
 async function handle(req, res) {
-  const url = new URL(req.url, "http://localhost");
+  const url = new URL(req.url, "http://127.0.0.1");
   if (req.method === "GET" && url.pathname === "/api/status") return send(res, 200, status());
   if (req.method === "GET" && url.pathname === "/api/settings") return send(res, 200, await readSettings());
+  if (req.method === "GET" && url.pathname === "/api/latest-output") return send(res, 200, { output: await latestOutput() });
   if (req.method === "GET" && url.pathname === "/api/printers") {
     try { return send(res, 200, { printers: await printers() }); }
     catch (error) { return send(res, 200, { printers: [], warning: error.message }); }
@@ -136,7 +159,19 @@ async function handle(req, res) {
   return send(res, 404, { error: "Nicht gefunden." });
 }
 await fs.mkdir(DATA, { recursive: true });
+const allowedHosts = new Set([`127.0.0.1:${PORT}`, `localhost:${PORT}`, `[::1]:${PORT}`]);
 const server = http.createServer((req, res) => {
+  const host = String(req.headers.host ?? "").toLowerCase();
+  if (!allowedHosts.has(host)) return send(res, 403, { error: "Ungültiger Host-Header." });
+  const origin = req.headers.origin;
+  if (origin) {
+    try {
+      const parsed = new URL(origin);
+      if (!["127.0.0.1", "localhost", "::1"].includes(parsed.hostname) || parsed.port !== String(PORT)) {
+        return send(res, 403, { error: "Cross-Origin-Anfrage blockiert." });
+      }
+    } catch { return send(res, 403, { error: "Ungültiger Origin-Header." }); }
+  }
   handle(req, res).catch((error) => send(res, 500, { error: error.message }));
 });
 server.listen(PORT, HOST, () => {
