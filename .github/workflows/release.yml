@@ -1,0 +1,175 @@
+name: Publish release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Release tag (for example v1.3.0)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    name: Validate release version
+    runs-on: ubuntu-24.04
+    outputs:
+      tag: ${{ steps.version.outputs.tag }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.inputs.tag || github.ref }}
+      - name: Read and validate version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(node -p "require('./package.json').version")"
+          TAG="${{ github.event.inputs.tag || github.ref_name }}"
+          if [[ "$TAG" != "v$VERSION" ]]; then
+            echo "Tag $TAG does not match package.json version v$VERSION" >&2
+            exit 1
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+
+  build-windows:
+    name: Build Windows installer
+    needs: version
+    runs-on: windows-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.version.outputs.tag }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies and test
+        run: |
+          npm ci
+          npm test
+      - name: Prepare portable application
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $dist = Join-Path $PWD "dist\Bingo-Bot"
+          New-Item -ItemType Directory -Force -Path (Join-Path $dist "runtime") | Out-Null
+          Copy-Item index.js, pdf-layout.js, ui-server.js, package.json, start-installed.bat -Destination $dist
+          Copy-Item public -Destination $dist -Recurse
+          Copy-Item (Get-Command node).Source -Destination (Join-Path $dist "runtime\node.exe")
+          npm prune --omit=dev
+          if ($LASTEXITCODE -ne 0) { throw "npm prune failed" }
+          Copy-Item node_modules -Destination $dist -Recurse
+          if (-not (Test-Path (Join-Path $dist "node_modules\playwright\package.json"))) { throw "Playwright dependency missing" }
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup --yes --no-progress
+      - name: Compile installer
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { throw "Inno Setup compiler not found" }
+          & $iscc "installer\Bingo-Bot.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Installer compilation failed" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: dist/installer/Bingo-Bot-Setup.exe
+          if-no-files-found: error
+
+  build-linux:
+    name: Build Linux packages
+    needs: version
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.version.outputs.tag }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies and test
+        run: |
+          npm ci
+          npm test
+      - name: Prepare Linux bundle and Debian package
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="${{ needs.version.outputs.version }}"
+          mkdir -p dist/bundle/runtime dist/bundle/bin dist/bundle/share/applications
+          cp index.js pdf-layout.js ui-server.js package.json start-linux-installed.sh dist/bundle/
+          cp -a public dist/bundle/public
+          cp start-linux-installed.sh dist/bundle/bin/bingo-bot
+          chmod +x dist/bundle/start-linux-installed.sh dist/bundle/bin/bingo-bot
+          cp "$(command -v node)" dist/bundle/runtime/node
+          chmod +x dist/bundle/runtime/node
+          npm prune --omit=dev
+          cp -a node_modules dist/bundle/node_modules
+          cp packaging/bingo-bot.desktop dist/bundle/share/applications/bingo-bot.desktop
+          tar -czf "dist/Bingo-Bot-Linux-x64.tar.gz" -C dist/bundle .
+          PKG="dist/deb-root"
+          mkdir -p "$PKG/DEBIAN" "$PKG/opt/bingo-bot" "$PKG/usr/bin" "$PKG/usr/share/applications"
+          cp -a dist/bundle/. "$PKG/opt/bingo-bot/"
+          ln -s /opt/bingo-bot/bin/bingo-bot "$PKG/usr/bin/bingo-bot"
+          cp packaging/bingo-bot.desktop "$PKG/usr/share/applications/bingo-bot.desktop"
+          cat > "$PKG/DEBIAN/control" <<CONTROL
+          Package: bingo-bot
+          Version: $VERSION
+          Section: utils
+          Priority: optional
+          Architecture: amd64
+          Maintainer: Jawollo07
+          Depends: libc6, libstdc++6, curl, cups-client, xdg-utils
+          Description: Bingo Bot für LOTTO Niedersachsen
+           Erstellt eine zweiseitige PDF mit vier BINGO-Matrizen und druckt sie.
+          CONTROL
+          chmod 0755 "$PKG/DEBIAN"
+          dpkg-deb --root-owner-group --build "$PKG" "dist/Bingo-Bot-$VERSION-amd64.deb"
+          dpkg-deb --info "dist/Bingo-Bot-$VERSION-amd64.deb"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-packages
+          path: |
+            dist/Bingo-Bot-Linux-x64.tar.gz
+            dist/Bingo-Bot-${{ needs.version.outputs.version }}-amd64.deb
+          if-no-files-found: error
+
+  publish:
+    name: Create GitHub Release
+    needs: [version, build-windows, build-linux]
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Download Windows installer
+        uses: actions/download-artifact@v4
+        with:
+          name: windows-installer
+          path: release-assets
+      - name: Download Linux packages
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-packages
+          path: release-assets
+      - name: Create release and attach installers
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.version.outputs.tag }}
+          name: Bingo-Bot ${{ needs.version.outputs.tag }}
+          generate_release_notes: true
+          make_latest: true
+          files: |
+            release-assets/Bingo-Bot-Setup.exe
+            release-assets/Bingo-Bot-Linux-x64.tar.gz
+            release-assets/Bingo-Bot-${{ needs.version.outputs.version }}-amd64.deb
