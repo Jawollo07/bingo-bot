@@ -44,14 +44,22 @@ async function getSpielscheine(page) {
 async function waitForLoginIfNeeded(page) {
     let spiele = await getSpielscheine(page);
     if (spiele.length === 4) return spiele;
-    if (!process.stdin.isTTY) throw new Error(`Es wurden ${spiele.length} von 4 Spielscheinen gefunden. Bitte im Browser anmelden und den Bot erneut starten.`);
     console.log("\n🔐 Bitte melde dich im geöffneten Browser bei LOTTO Niedersachsen an.");
-    const rl = readline.createInterface({ input, output });
-    try { await rl.question("Nach erfolgreicher Anmeldung hier ENTER drücken … "); } finally { rl.close(); }
-    await navigate(page, ACCOUNT_URL);
-    await page.locator('a[href*="/spielkonto/meine-spiele/"]').first().waitFor({ state: "attached", timeout: 20_000 }).catch(() => {});
-    spiele = await getSpielscheine(page);
-    if (spiele.length !== 4) throw new Error(`Es werden genau 4 Spielscheine benötigt; gefunden: ${spiele.length}. Bitte prüfe „Meine Spiele“.`);
+    if (process.stdin.isTTY) {
+        const rl = readline.createInterface({ input, output });
+        try { await rl.question("Nach erfolgreicher Anmeldung hier ENTER drücken … "); } finally { rl.close(); }
+        await navigate(page, ACCOUNT_URL);
+        spiele = await getSpielscheine(page);
+    } else {
+        console.log("Warte bis zu 5 Minuten auf deine Anmeldung …");
+        for (let attempt = 0; attempt < 120 && spiele.length !== 4; attempt++) {
+            await sleep(2500);
+            if (page.url() !== ACCOUNT_URL) await navigate(page, ACCOUNT_URL);
+            spiele = await getSpielscheine(page);
+            if (spiele.length !== 4 && attempt % 12 === 11) console.log("Anmeldung noch nicht erkannt – warte weiter …");
+        }
+    }
+    if (spiele.length !== 4) throw new Error(`Es werden genau 4 Spielscheine benötigt; gefunden: ${spiele.length}. Bitte Anmeldung und „Meine Spiele“ prüfen.`);
     return spiele;
 }
 async function getBingoLink(page) {
