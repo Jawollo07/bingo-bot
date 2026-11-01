@@ -36,7 +36,8 @@ jobs:
           $dist = Join-Path $PWD "dist\Bingo-Bot"
           New-Item -ItemType Directory -Force -Path $dist | Out-Null
           New-Item -ItemType Directory -Force -Path (Join-Path $dist "runtime") | Out-Null
-          Copy-Item index.js, pdf-layout.js, package.json, start-installed.bat -Destination $dist
+          Copy-Item index.js, pdf-layout.js, ui-server.js, package.json, start-installed.bat -Destination $dist
+          Copy-Item public -Destination $dist -Recurse
           Copy-Item (Get-Command node).Source -Destination (Join-Path $dist "runtime\node.exe")
           npm prune --omit=dev
           if ($LASTEXITCODE -ne 0) { throw "npm prune failed" }
