@@ -6,6 +6,7 @@ import readline from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import { spawn } from "node:child_process";
 import { createTwoPageLandscapePdf } from "./pdf-layout.js";
+import { REQUIRED_SPIELSCHEINE, selectSpielscheine } from "./spielschein-utils.js";
 
 const ACCOUNT_URL = "https://www.lotto-niedersachsen.de/spielkonto/meine-spiele";
 const LOTTO_ORIGIN = "https://www.lotto-niedersachsen.de";
@@ -67,7 +68,12 @@ async function waitForSpielscheine(page, timeoutMs = 15_000) {
     let spiele = [];
     while (Date.now() < deadline) {
         spiele = await getSpielscheine(page);
-        if (spiele.length === 4) return spiele;
+        if (spiele.length >= REQUIRED_SPIELSCHEINE) {
+            if (spiele.length > REQUIRED_SPIELSCHEINE) {
+                console.warn(`ℹ️ ${spiele.length} Spielscheine gefunden; für das aktuelle Drucklayout werden die ersten ${REQUIRED_SPIELSCHEINE} verwendet.`);
+            }
+            return selectSpielscheine(spiele);
+        }
         await sleep(500);
     }
     return spiele;
@@ -79,18 +85,20 @@ async function waitForLoginIfNeeded(page) {
     if (await isLoggedIn(page)) {
         console.log("✓ LOTTO-Konto ist bereits angemeldet – prüfe Spielscheine …");
         const spiele = await waitForSpielscheine(page);
-        if (spiele.length === 4) return spiele;
-        throw new Error(`LOTTO-Anmeldung erkannt, aber es wurden nur ${spiele.length} von 4 Spielscheinen gefunden. Bitte „Meine Spiele“ im Browser prüfen.`);
+        if (spiele.length === REQUIRED_SPIELSCHEINE) return spiele;
+        throw new Error(`LOTTO-Anmeldung erkannt, aber es wurden nur ${spiele.length} von ${REQUIRED_SPIELSCHEINE} Spielscheinen gefunden. Bitte „Meine Spiele“ im Browser prüfen.`);
     }
 
-    console.log("\n🔐 Bitte melde dich im geöffneten Browser bei LOTTO Niedersachsen an.");
+    console.log("\\n🔐 Bitte melde dich im geöffneten Browser bei LOTTO Niedersachsen an.");
     if (process.stdin.isTTY) {
         const rl = readline.createInterface({ input, output });
         try { await rl.question("Nach erfolgreicher Anmeldung hier ENTER drücken … "); } finally { rl.close(); }
         await navigate(page, ACCOUNT_URL);
         if (!(await isLoggedIn(page))) throw new Error("Anmeldung wurde nicht erkannt. Bitte prüfen, ob LOTTO die Anmeldung übernommen hat.");
         const spiele = await waitForSpielscheine(page);
-        if (spiele.length !== 4) throw new Error(`Anmeldung erkannt, aber genau 4 Spielscheine werden benötigt; gefunden: ${spiele.length}.`);
+        if (spiele.length !== REQUIRED_SPIELSCHEINE) {
+            throw new Error(`Anmeldung erkannt, aber es werden ${REQUIRED_SPIELSCHEINE} Spielscheine benötigt; gefunden: ${spiele.length}.`);
+        }
         return spiele;
     }
 
@@ -100,12 +108,12 @@ async function waitForLoginIfNeeded(page) {
     while (Date.now() < deadline) {
         if (await isLoggedIn(page)) {
             const spiele = await waitForSpielscheine(page, 15_000);
-            if (spiele.length === 4) return spiele;
-            throw new Error(`Anmeldung erkannt, aber genau 4 Spielscheine werden benötigt; gefunden: ${spiele.length}. Bitte „Meine Spiele“ prüfen.`);
+            if (spiele.length === REQUIRED_SPIELSCHEINE) return spiele;
+            throw new Error(`Anmeldung erkannt, aber es werden ${REQUIRED_SPIELSCHEINE} Spielscheine benötigt; gefunden: ${spiele.length}. Bitte „Meine Spiele“ prüfen.`);
         }
         const count = (await getSpielscheine(page)).length;
         if (count !== lastCount) {
-            console.log(`Anmeldung noch nicht erkannt (Spielscheine: ${count}/4) …`);
+            console.log(`Anmeldung noch nicht erkannt (Spielscheine: ${count}/${REQUIRED_SPIELSCHEINE}) …`);
             lastCount = count;
         }
         await sleep(1000);
@@ -129,7 +137,7 @@ async function saveBingoMatrixPdf(page, id, folder) {
 async function downloadBingoSheets(page, spiele, folder) {
     const files = [];
     for (const [i, spiel] of spiele.entries()) {
-        console.log(`\n[${i + 1}/4] Matrix für Spielschein ${spiel.id}`);
+        console.log(`\n[${i + 1}/${spiele.length}] Matrix für Spielschein ${spiel.id}`);
         await navigate(page, spiel.href);
         await navigate(page, await getBingoLink(page));
         files.push(await saveBingoMatrixPdf(page, spiel.id, folder));
