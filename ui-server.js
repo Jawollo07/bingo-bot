@@ -147,6 +147,7 @@ server.listen(PORT, HOST, () => {
     const opener = process.platform === "win32"
       ? spawn("cmd", ["/c", "start", "", url], { detached: true, stdio: "ignore" })
       : spawn("xdg-open", [url], { detached: true, stdio: "ignore" });
+    opener.on("error", () => {});
     opener.unref();
   }
 });
