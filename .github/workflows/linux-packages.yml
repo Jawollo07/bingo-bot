@@ -64,7 +64,7 @@ jobs:
           Priority: optional
           Architecture: amd64
           Maintainer: Jawollo07
-          Depends: libc6, libstdc++6, curl
+          Depends: libc6, libstdc++6, curl, cups-client, xdg-utils
           Description: Bingo Bot für LOTTO Niedersachsen
            Erstellt eine zweiseitige PDF mit vier BINGO-Matrizen und druckt sie.
           CONTROL
