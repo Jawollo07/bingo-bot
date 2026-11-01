@@ -144,7 +144,9 @@ server.listen(PORT, HOST, () => {
   console.log(`Bingo Bot UI: ${url}`);
   console.log("Die Oberfläche ist ausschließlich auf diesem Gerät erreichbar.");
   if (process.env.BINGO_NO_OPEN !== "1") {
-    const opener = spawn("xdg-open", [url], { detached: true, stdio: "ignore" });
+    const opener = process.platform === "win32"
+      ? spawn("cmd", ["/c", "start", "", url], { detached: true, stdio: "ignore" })
+      : spawn("xdg-open", [url], { detached: true, stdio: "ignore" });
     opener.unref();
   }
 });
